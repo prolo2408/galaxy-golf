@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    image: galaxy-golf:lokal
+    restart: unless-stopped
+    expose:
+      - "80"
