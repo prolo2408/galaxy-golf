@@ -6,8 +6,8 @@ const cv=$('c'),x=cv.getContext('2d');
 
 // ---------- Spielstand ----------
 let save={un:3,best:{},seen:{},skin:null,cur:0};
-try{const s=JSON.parse(localStorage.getItem('gg3')||'null');if(s&&s.best)save=Object.assign(save,s);}catch(e){}
-function persist(){try{localStorage.setItem('gg3',JSON.stringify(save));}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem('gg4')||'null');if(s&&s.best)save=Object.assign(save,s);}catch(e){}
+function persist(){try{localStorage.setItem('gg4',JSON.stringify(save));}catch(e){}}
 function autoSkin(){const d=new Date(),m=d.getMonth(),dd=d.getDate();return(m===9&&dd>=10)||(m===10&&dd<=3)?'halloween':'classic';}
 
 // ---------- Skins (flache Farben) ----------

@@ -3,9 +3,15 @@
 // Aufruf: node tools/levelgen.cjs <ausgabe.json> [anzahl-kandidaten]
 const fs=require("fs"),path=require("path");
 const P=new Function(fs.readFileSync(path.join(__dirname,"../src/physics.js"),"utf8")+";return{simulate,gm};")();
-const W=360,H=560,R=Math.PI/180,TOTAL=220,QUOTA=[50,60,60,50];
+const W=360,H=560,R=Math.PI/180,QUOTA=[70,85,85,80],TOTAL=QUOTA.reduce((a,b)=>a+b),MINDEV=+(process.env.MINDEV||38);
 const norm=l=>Object.assign({W,H},l);
-function count(l){let n=0;for(let a=0;a<360;a+=3)for(let pw=0.5;pw<=7.21;pw+=0.3)if(P.simulate(l,Math.cos(a*R)*pw,Math.sin(a*R)*pw)>=0)n++;return n;}
+// Zählt treffende Schüsse im Raster und misst, wie stark der geradeste Treffer von der direkten Linie Ball-Loch abweicht.
+// Liegt ein Treffer fast auf der Linie, kann man die Planeten ignorieren: solche Bahnen fliegen raus.
+function count(l){let n=0,dev=1e9;const bx=l.b[0],by=l.b[1],dx=l.h[0]-bx,dy=l.h[1]-by,len=Math.hypot(dx,dy);
+  for(let a=0;a<360;a+=3)for(let pw=0.5;pw<=7.21;pw+=0.3){const vx=Math.cos(a*R)*pw,vy=Math.sin(a*R)*pw;if(P.simulate(l,vx,vy)<0)continue;n++;
+    const path=[];P.simulate(l,vx,vy,path);let m=0,warp=false;for(const q of path){if(!q){warp=true;break;}const t=Math.max(0,Math.min(1,((q[0]-bx)*dx+(q[1]-by)*dy)/(len*len)));m=Math.max(m,Math.hypot(q[0]-bx-t*dx,q[1]-by-t*dy));}
+    if(warp)m=1e6;dev=Math.min(dev,m);}
+  return{n,dev};}
 function solve(l){let best=null;
   for(let a=0;a<360;a+=2)for(let pw=0.5;pw<=7.21;pw+=0.2){const vx=Math.cos(a*R)*pw,vy=Math.sin(a*R)*pw,f=P.simulate(l,vx,vy);if(f<0)continue;
     let ok=0;for(const[da,dp]of[[1.5,0],[-1.5,0],[0,.12],[0,-.12]])if(P.simulate(l,Math.cos((a+da)*R)*(pw+dp),Math.sin((a+da)*R)*(pw+dp))>=0)ok++;
@@ -42,9 +48,12 @@ function make(d){
   return l;}
 const target=+(process.argv[3]||650),cands=[],t0=Date.now();let tries=0;
 const first={b:[180,500],h:[180,80],p:[[180,290,40,1]]};
-while(cands.length<target){tries++;const d=tries===1?-1:rnd();const l=d<0?first:make(d);const L=norm(l),c=count(L);if(c<3)continue;
+let direct=0;
+while(cands.length<target){tries++;const d=tries===1?-1:rnd();const l=d<0?first:make(d);const L=norm(l),cm=count(L),c=cm.n;if(c<3)continue;
+  if(d>=0&&cm.dev<MINDEV){direct++;continue;}
+  {const a=Math.atan2(L.h[1]-L.b[1],L.h[0]-L.b[0]);let hit=false;for(const da of[0,-1.5,1.5])for(let pw=0.5;pw<=7.21&&!hit;pw+=0.1)if(P.simulate(L,Math.cos(a+da*R)*pw,Math.sin(a+da*R)*pw)>=0)hit=true;if(hit){direct++;continue;}}
   const s=solve(L);if(!s||s.s<1000)continue;cands.push({l,c,s:[s.vx,s.vy],first:d<0});
-  if(cands.length%50===0)console.error(cands.length,"Kandidaten,",tries,"Versuche,",Math.round((Date.now()-t0)/1000)+"s");}
+  if(cands.length%50===0)console.error(cands.length,"Kandidaten,",tries,"Versuche,",direct,"zu direkt,",Math.round((Date.now()-t0)/1000)+"s");}
 // gleichmäßig über die Schwierigkeit verteilt auswählen
 cands.sort((a,b)=>b.first-a.first||b.c-a.c);
 const pick=[cands[0]],rest=cands.slice(1);for(let i=0;i<TOTAL-1;i++)pick.push(rest[Math.round(i*(rest.length-1)/(TOTAL-2))]);
