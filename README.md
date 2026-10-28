@@ -1,6 +1,6 @@
 # Galaxy Golf
 
-Weltraum-Minigolf mit Schwerkraft: 220 Bahnen in vier Stufen (Leicht, Mittel, Schwer, Extrem), Tipp-Knopf, Halloween- und klassischer Look. Auf dem Handy hochkant, am Rechner quer mit Seitenleiste. Als App installierbar (PWA) und offline spielbar.
+Weltraum-Minigolf mit echter Schwerkraft (Newton: Masse wächst mit Dichte und Radius³, Sonnen ziehen am stärksten, Monde kreisen mit Kepler-Geschwindigkeit, kein Bremsen im Vakuum). 220 Bahnen in vier Stufen (Leicht, Mittel, Schwer, Extrem), Tipp-Knopf, schlichte flache Planeten in vielen Varianten, Halloween- und klassischer Look. Auf dem Handy hochkant, am Rechner quer mit Seitenleiste. Als App installierbar (PWA) und offline spielbar.
 
 ## Auf ProloWelt installieren
 
@@ -31,7 +31,7 @@ Neue Fassung: auf der Tool-Seite **Aktualisieren**.
 | `src/physics.js` | Flugphysik, gemeinsam für Spiel und Bahn-Generator |
 | `src/game.js`, `src/style.css`, `src/body.html` | das Spiel |
 | `src/levels.json` | die Bahnen mit Stufe, Par und Lösungsschuss für den Tipp |
-| `tools/levelgen.cjs` | erzeugt und prüft Bahnen, sortiert nach Schwierigkeit |
+| `tools/levelgen.cjs` | erzeugt Bahnen (`node tools/levelgen.cjs src/levels.json 800`), misst die Schwierigkeit und verteilt sie auf vier Stufen |
 | `tools/build.cjs` | baut `site/index.html` |
 | `site/` | das, was ausgeliefert wird |
 

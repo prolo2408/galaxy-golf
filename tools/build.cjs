@@ -12,7 +12,7 @@ const pwa=`<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Galaxy Golf</title>
 <meta name="description" content="Weltraum-Minigolf mit Schwerkraft, ${levels.length} Bahnen.">
-<meta name="theme-color" content="#070a16">
+<meta name="theme-color" content="#080b22">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,7 +21,7 @@ const pwa=`<!doctype html>
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 ${fonts}
-<style>html{box-sizing:border-box;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);background:#070a16}[hidden]{display:none!important}</style>
+<style>html{box-sizing:border-box;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);background:#080b22}[hidden]{display:none!important}</style>
 </head>
 <body>
 ${core}
