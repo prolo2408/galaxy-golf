@@ -1,0 +1,33 @@
+<div class="app">
+  <header class="top">
+    <div>
+      <h1 class="brand">Galaxy <span>Golf</span></h1>
+      <div class="sub"><span class="tier t0" id="tier">Leicht</span><span id="lvn">Bahn 1</span></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>Par</small><b id="par">2</b></div>
+      <div class="stat"><small>Schläge</small><b id="sh">0</b></div>
+      <div class="stat"><small>Sterne</small><b id="stars">0</b></div>
+    </div>
+  </header>
+  <aside class="side">
+    <ul class="legend">
+      <li><i class="dot pl"></i>Planeten ziehen die Kugel an</li>
+      <li><i class="dot pu"></i><span id="lgpush">Kürbisse stoßen sie ab</span></li>
+      <li><i class="dot wh"></i>Wurmlöcher verbinden zwei Orte</li>
+      <li><i class="dot bh"></i>Ziel ist das Schwarze Loch</li>
+    </ul>
+    <p class="keys">Maus ziehen und loslassen<br><kbd>T</kbd> Tipp &nbsp; <kbd>R</kbd> Neu &nbsp; <kbd>M</kbd> Bahnen<br><kbd>Enter</kbd> nächste Bahn</p>
+  </aside>
+  <main class="field" id="field">
+    <canvas id="c" aria-label="Spielfeld: zurückziehen und loslassen, um die Kugel abzuschießen"></canvas>
+    <div class="msg" id="msg"></div>
+    <div class="intro" id="intro" hidden><b id="inh"></b><span id="inp"></span></div>
+    <div class="overlay" id="ov" hidden><div class="card" id="card"></div></div>
+  </main>
+  <nav class="bar">
+    <button id="menu" type="button">Bahnen</button>
+    <button id="tip" type="button">Tipp</button>
+    <button id="reset" type="button">Neu</button>
+  </nav>
+</div>

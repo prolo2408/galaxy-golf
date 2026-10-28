@@ -1,12 +1,12 @@
 {
   "name": "Galaxy Golf",
   "short_name": "Galaxy Golf",
-  "description": "Weltraum-Minigolf mit Schwerkraft, 120 Bahnen.",
+  "description": "Weltraum-Minigolf mit Schwerkraft, 220 Bahnen in vier Stufen.",
   "lang": "de",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#0b0d1a",
   "theme_color": "#0b0d1a",
   "icons": [
