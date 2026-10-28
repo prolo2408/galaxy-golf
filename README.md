@@ -1,6 +1,6 @@
 # Galaxy Golf
 
-Weltraum-Minigolf mit echter Schwerkraft (Newton: Masse wächst mit Dichte und Radius³, Sonnen ziehen am stärksten, Monde kreisen mit Kepler-Geschwindigkeit, kein Bremsen im Vakuum). 220 Bahnen in vier Stufen (Leicht, Mittel, Schwer, Extrem), Tipp-Knopf, schlichte flache Planeten in vielen Varianten, Halloween- und klassischer Look. Auf dem Handy hochkant, am Rechner quer mit Seitenleiste. Als App installierbar (PWA) und offline spielbar.
+Weltraum-Minigolf mit echter Schwerkraft (Newton: Masse wächst mit Dichte und Radius³, Sonnen ziehen am stärksten, Monde kreisen mit Kepler-Geschwindigkeit, kein Bremsen im Vakuum). 220 Bahnen in vier Stufen (Leicht, Mittel, Schwer, Extrem), Tipp-Knopf, schlichte flache Planeten in vielen Varianten, klassischer Look und Halloween-Look (Sonnen werden Kürbislaternen, Monde Geister, Planeten in Halloween-Farben). Auf dem Handy hochkant, am Rechner quer mit Seitenleiste. Als App installierbar (PWA) und offline spielbar.
 
 ## Auf ProloWelt installieren
 

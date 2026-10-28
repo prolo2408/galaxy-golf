@@ -34,13 +34,23 @@ const PAL={
   venus:[['#f5d58e','#e3b25f']],
   moon:[['#bab7cc','#8e8aa8'],['#cdb39a','#9f8166'],['#a9b4c4','#7d889c']]
 };
-function mkLooks(i){const r=rng(i*7919+13);return LV[i].p.map((q,j)=>{const seed=i*131+j*17+1,pk=a=>a[Math.floor(r()*a.length)];
-  if(q[3]===4)return{d:'sun',seed};
-  if(q.length>4)return{d:'moon',c:pk(PAL.moon),seed};
-  if(q[3]===2){if(skin==='halloween'&&r()<.45)return{d:'pumpkin',seed};const d=r()<.45?'ringed':'bands';return{d,c:pk(PAL[d]),seed};}
-  if(q[3]===3)return r()<.35?{d:'ringed',c:pk(PAL.ringed),seed}:{d:'ice',c:pk(PAL.ice),seed};
-  if(skin==='halloween'&&q[2]>=20&&r()<.3)return{d:'pumpkin',seed};
-  const d=q[2]<16?'moon':pk(['earth','mars','venus','moon','earth','mars']);return{d,c:pk(PAL[d]),seed};});}
+const PAL_H={
+  bands:[['#ff9f43','#c95f1a','#ffd2a6'],['#9b6bd6','#6c3fae','#cdb0f4'],['#86d46f','#4a933f','#c8f1b8']],
+  ringed:[['#dcc6ff','#9b6bd6'],['#ffd1a0','#ff8a1f'],['#cdf7ae','#73c95e']],
+  ice:[['#b9f0e0','#e6fff8','#79cdb3'],['#d8c8ff','#f1ebff','#a48ae6']],
+  earth:[['#4b3a80','#7bd36a'],['#3a2f6b','#9be07f']],
+  mars:[['#c4472f','#86281c']],
+  venus:[['#eadcb6','#c8ae78']],
+  moon:[['#ddd6c6','#a89f8b'],['#c9c0d6','#958aa8']]
+};
+// Halloween verkleidet jede Art immer gleich: Sonnen werden Kürbislaternen, Monde kleine Geister,
+// Planeten behalten ihr Design in Halloween-Farben.
+function mkLooks(i){const r=rng(i*7919+13),hw=skin==='halloween',PP=hw?PAL_H:PAL;return LV[i].p.map((q,j)=>{const seed=i*131+j*17+1,pk=a=>a[Math.floor(r()*a.length)];
+  if(q[3]===4)return{d:hw?'lantern':'sun',seed};
+  if(q.length>4)return hw?{d:'ghost',seed}:{d:'moon',c:pk(PP.moon),seed};
+  if(q[3]===2){const d=r()<.45?'ringed':'bands';return{d,c:pk(PP[d]),seed};}
+  if(q[3]===3)return r()<.35?{d:'ringed',c:pk(PP.ringed),seed}:{d:'ice',c:pk(PP.ice),seed};
+  const d=q[2]<16?'moon':pk(['earth','mars','venus','moon','earth','mars']);return{d,c:pk(PP[d]),seed};});}
 
 function lightFor(px,py,P){let best=null,bd=1e9;for(const p of P)if(p[3]===4){const d=Math.hypot(p[0]-px,p[1]-py);if(d>1&&d<bd){bd=d;best=p;}}
   if(!best)return[-.6,-.8];return[(best[0]-px)/bd,(best[1]-py)/bd];}
@@ -50,7 +60,7 @@ function blob(cx,cy,s,r){x.beginPath();x.arc(cx,cy,s,0,7);x.arc(cx+s*.8,cy+s*.25
 function drawPlanet(L,px,py,r,lt){const R=rng(L.seed);x.save();x.translate(px,py);
   if(L.d==='ringed')ringArc(r,L.c[1],true);
   x.beginPath();x.arc(0,0,r,0,7);
-  const base=L.d==='pumpkin'?'#ff8a1f':L.d==='earth'?L.c[0]:L.c[0];x.fillStyle=base;x.fill();
+  x.fillStyle=L.c[0];x.fill();
   x.save();x.clip();
   if(L.d==='bands'){const n=4+Math.floor(R()*2);for(let i=0;i<n;i++){const y=-r+(i+.5)*2*r/n+(R()-.5)*r*.15,h=r*(.12+R()*.16);x.fillStyle=i%2?L.c[1]:L.c[2];x.beginPath();x.ellipse(0,y,r*1.2,h,0,0,7);x.fill();}
     if(R()<.7){x.fillStyle=L.c[1];x.beginPath();x.ellipse(r*(R()-.5)*.8,r*(.25+R()*.2),r*.24,r*.13,0,0,7);x.fill();}}
@@ -61,14 +71,27 @@ function drawPlanet(L,px,py,r,lt){const R=rng(L.seed);x.save();x.translate(px,py
   else if(L.d==='mars'){x.fillStyle=L.c[1];for(let i=0;i<3;i++){x.beginPath();x.ellipse((R()-.5)*r*1.2,(R()-.5)*r*1.1,r*(.15+R()*.2),r*(.1+R()*.12),R()*3,0,7);x.fill();}x.fillStyle='#fff1ea';x.beginPath();x.ellipse(0,-r*1.02,r*.5,r*.2,0,0,7);x.fill();}
   else if(L.d==='venus'){x.strokeStyle=L.c[1];x.lineWidth=r*.12;x.lineCap='round';for(let i=0;i<3;i++){const y=(i-1)*r*.5;x.beginPath();x.moveTo(-r,y);x.bezierCurveTo(-r*.3,y-r*.25,r*.3,y+r*.25,r,y);x.stroke();}}
   else if(L.d==='moon'){const n=3+Math.floor(R()*3);for(let i=0;i<n;i++){const cx=(R()-.5)*r*1.3,cy=(R()-.5)*r*1.3,cr=r*(.12+R()*.16);x.fillStyle=L.c[1];x.beginPath();x.arc(cx,cy,cr,0,7);x.fill();x.strokeStyle='rgba(255,255,255,.25)';x.lineWidth=Math.max(.8,r*.04);x.beginPath();x.arc(cx,cy,cr,Math.PI*.9,Math.PI*1.7);x.stroke();}}
-  else if(L.d==='pumpkin'){x.strokeStyle='#d6600a';x.lineWidth=Math.max(1.2,r*.07);for(const k of[.32,.68]){x.beginPath();x.ellipse(0,0,r*k,r*1.02,0,0,7);x.stroke();}x.beginPath();x.moveTo(0,-r);x.lineTo(0,r);x.stroke();}
   x.fillStyle=C.shade;x.beginPath();x.rect(-r-2,-r-2,2*r+4,2*r+4);x.moveTo(lt[0]*r*.42+r*1.02,lt[1]*r*.42);x.arc(lt[0]*r*.42,lt[1]*r*.42,r*1.02,0,Math.PI*2,true);x.fill('evenodd');
   x.restore();
   if(L.d==='ringed')ringArc(r,L.c[1],false);
-  if(L.d==='pumpkin'){x.strokeStyle='#4f7d24';x.lineWidth=Math.max(2,r*.16);x.lineCap='round';x.beginPath();x.moveTo(0,-r*.92);x.quadraticCurveTo(r*.04,-r*1.2,r*.22,-r*1.26);x.stroke();
-    const fl=.7+.3*Math.sin(anim*8+px)*Math.sin(anim*5+py);x.fillStyle='rgba(255,'+(200+40*fl|0)+',90,'+(.75+.25*fl)+')';x.beginPath();
-    for(const s of[-1,1]){x.moveTo(s*.16*r,-.05*r);x.lineTo(s*.44*r,-.05*r);x.lineTo(s*.3*r,-.32*r);x.closePath();}
-    x.moveTo(-.5*r,.18*r);x.quadraticCurveTo(0,.6*r,.5*r,.18*r);x.lineTo(.3*r,.28*r);x.lineTo(.15*r,.2*r);x.lineTo(0,.32*r);x.lineTo(-.15*r,.2*r);x.lineTo(-.3*r,.28*r);x.closePath();x.fill();}
+  x.restore();}
+function drawGhost(px,py,r,vx){x.save();x.translate(px,py);const k=r*1.15,w=Math.sin(anim*6+px*.1);
+  x.fillStyle='rgba(246,240,255,.12)';x.beginPath();x.arc(0,0,r*1.9,0,7);x.fill();
+  x.fillStyle='#f4efff';x.beginPath();x.arc(0,-k*.15,k*.8,Math.PI,0);x.lineTo(k*.8,k*.72);
+  for(let i=0;i<4;i++){const a=k*.8-(i+.5)*k*.4,b=k*.8-(i+1)*k*.4;x.quadraticCurveTo(a,k*(.95+(i%2?-.12:.12)*w),b,k*.72);}x.closePath();x.fill();
+  x.fillStyle='#2a1838';const ex=vx<0?-.12:.12;x.beginPath();x.ellipse((-.28+ex)*k,-.18*k,.13*k,.18*k,0,0,7);x.ellipse((.28+ex)*k,-.18*k,.13*k,.18*k,0,0,7);x.fill();
+  x.beginPath();x.ellipse(ex*k,.2*k,.12*k,.1*k,0,0,7);x.fill();x.restore();}
+function drawLantern(px,py,r){x.save();x.translate(px,py);const fl=.75+.25*Math.sin(anim*9+px)*Math.sin(anim*5.3+py);
+  const g=x.createRadialGradient(0,0,r*.8,0,0,r*2.6);g.addColorStop(0,'rgba(255,140,30,'+.4*fl+')');g.addColorStop(1,'rgba(255,120,20,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,r*2.6,0,7);x.fill();
+  x.fillStyle='#ff8a1f';x.beginPath();x.arc(0,0,r,0,7);x.fill();x.save();x.clip();
+  x.fillStyle='#e8670c';for(const k of[-.62,0,.62]){x.beginPath();x.ellipse(k*r,0,r*.36,r*1.05,0,0,7);x.fill();}
+  x.fillStyle='#ffa646';for(const k of[-.31,.31]){x.beginPath();x.ellipse(k*r,0,r*.2,r*1.02,0,0,7);x.fill();}x.restore();
+  x.strokeStyle='#4f7d24';x.lineWidth=Math.max(3,r*.18);x.lineCap='round';x.beginPath();x.moveTo(0,-r*.9);x.quadraticCurveTo(r*.05,-r*1.22,r*.26,-r*1.28);x.stroke();
+  x.fillStyle='rgba(255,'+(214+30*fl|0)+',110,'+(.85+.15*fl)+')';x.beginPath();
+  for(const s of[-1,1]){x.moveTo(s*.14*r,-.04*r);x.lineTo(s*.46*r,-.04*r);x.lineTo(s*.3*r,-.36*r);x.closePath();}
+  x.moveTo(-.07*r,.12*r);x.lineTo(.07*r,.12*r);x.lineTo(0,0);x.closePath();
+  x.moveTo(-.56*r,.2*r);x.quadraticCurveTo(0,.68*r,.56*r,.2*r);x.lineTo(.4*r,.31*r);x.lineTo(.26*r,.24*r);x.lineTo(.12*r,.37*r);x.lineTo(-.04*r,.26*r);x.lineTo(-.18*r,.37*r);x.lineTo(-.33*r,.25*r);x.lineTo(-.45*r,.32*r);x.closePath();x.fill();
+  x.strokeStyle='rgba(255,170,60,.5)';x.setLineDash([4,5]);x.lineDashOffset=-anim*6;x.lineWidth=1.2;x.beginPath();x.arc(0,0,r+BURN+5,0,7);x.stroke();x.setLineDash([]);x.lineDashOffset=0;
   x.restore();}
 function drawSun(px,py,r){x.save();x.translate(px,py);const s=C.sun;
   const g=x.createRadialGradient(0,0,r*.8,0,0,r*2.6);g.addColorStop(0,rgba(s[1],.35));g.addColorStop(1,rgba(s[1],0));x.fillStyle=g;x.beginPath();x.arc(0,0,r*2.6,0,7);x.fill();
@@ -96,8 +119,7 @@ function buildBg(){const w=cv.width,h=cv.height,g=(bg=document.createElement('ca
   g.fillStyle=C.bg;g.fillRect(0,0,w,h);
   const n=Math.round(w*h/(1100*DPR*DPR));for(let i=0;i<n;i++){const sz=(.5+Math.pow(r(),4)*1.4)*k;g.fillStyle='rgba('+C.star+','+(.2+r()*.55)+')';g.beginPath();g.arc(r()*w,r()*h,sz,0,7);g.fill();}
   for(let i=0;i<7;i++){const sx=r()*w,sy=r()*h,L=(2.5+r()*3)*k;g.fillStyle='rgba('+C.star+',.85)';g.beginPath();g.moveTo(sx,sy-L);g.quadraticCurveTo(sx,sy,sx+L,sy);g.quadraticCurveTo(sx,sy,sx,sy+L);g.quadraticCurveTo(sx,sy,sx-L,sy);g.quadraticCurveTo(sx,sy,sx,sy-L);g.fill();}
-  if(skin==='halloween'){const mr=Math.min(w,h)*.1,mx=w-mr*1.4,my=mr*1.4;g.globalAlpha=.32;g.fillStyle='#f6d9a8';g.beginPath();g.arc(mx,my,mr,0,7);g.fill();
-    g.fillStyle='#c99a62';for(const[a,b,c]of[[-.3,-.2,.2],[.3,.15,.26],[-.1,.45,.14],[.35,-.38,.11]]){g.beginPath();g.arc(mx+a*mr,my+b*mr,c*mr,0,7);g.fill();}g.globalAlpha=1;}
+  if(skin==='halloween'){const mr=Math.min(w,h)*.09,mx=w-mr*1.6,my=mr*1.6;g.fillStyle='rgba(246,217,168,.22)';g.beginPath();g.arc(mx,my,mr,0,Math.PI*2);g.moveTo(mx+mr*.38+mr*.92,my-mr*.12);g.arc(mx+mr*.38,my-mr*.12,mr*.92,0,Math.PI*2);g.fill('evenodd');}
   const rs=rng(7);stars=Array.from({length:22},()=>[rs(),rs(),rs()*6]);}
 
 // ---------- Zustand ----------
@@ -106,16 +128,17 @@ function home(){ball={x:lvl.b[0],y:lvl.b[1],vx:0,vy:0,cd:0};trail=[];t=0;frames=
 function load(i){li=Math.max(0,Math.min(N-1,i));save.cur=li;persist();lvl=inst(li);looks=mkLooks(li);shots=0;hint=null;drag=null;st='aim';home();$('ov').hidden=true;ui();intro();}
 function totalStars(){return Object.values(save.best).reduce((a,b)=>a+b.st,0);}
 function ui(){const tr=$('tier');tr.textContent=TIERS[lvl.t];tr.className='tier t'+lvl.t;$('lvn').textContent='Bahn '+(li+1)+' von '+N;
-  $('par').textContent=lvl.par;$('sh').textContent=shots;$('stars').textContent=totalStars();$('tip').classList.toggle('on',!!hint);}
+  $('par').textContent=lvl.par;$('sh').textContent=shots;$('stars').textContent=totalStars();$('tip').classList.toggle('on',!!hint);
+  const hw=skin==='halloween';$('lgsun').textContent=hw?'Kürbislaternen sind die Sonnen: sehr stark, zu nah verglüht die Kugel':'Sonnen ziehen sehr stark, zu nah verglüht die Kugel';$('lgmoon').textContent=hw?'Geister kreisen als Monde um ihren Planeten':'Monde kreisen um ihren Planeten';}
 let msgT;function say(s,col){const m=$('msg');m.textContent=s;m.style.color=col||'var(--dim)';m.style.opacity=1;clearTimeout(msgT);msgT=setTimeout(()=>m.style.opacity=0,2600);}
 
 // ---------- Neue Elemente erklären ----------
 const INTRO={start:['So geht’s','Irgendwo aufs Feld tippen, zurückziehen und loslassen. Alles zieht die Kugel an, große und dichte Planeten am stärksten. Ziel ist das Schwarze Loch.'],
-  sun:['Neu: Sonnen','Sie ziehen viel stärker als Planeten. Wer über den gestrichelten Ring hinein fliegt, verglüht.'],
-  moon:['Neu: Monde','Sie kreisen um ihren Planeten, so schnell, wie es seine Schwerkraft vorgibt. Bei jedem Schuss starten sie an derselben Stelle.'],
+  sun:[()=>skin==='halloween'?'Neu: Kürbislaternen':'Neu: Sonnen',()=>(skin==='halloween'?'An Halloween sind die Sonnen Kürbislaternen. ':'')+'Sie ziehen viel stärker als Planeten. Wer über den gestrichelten Ring hinein fliegt, verglüht.'],
+  moon:[()=>skin==='halloween'?'Neu: Geister':'Neu: Monde',()=>(skin==='halloween'?'An Halloween spuken die Monde als Geister. ':'')+'Sie kreisen um ihren Planeten, so schnell, wie es seine Schwerkraft vorgibt. Bei jedem Schuss starten sie an derselben Stelle.'],
   warp:['Neu: Wurmloch','Rein in den einen Strudel, raus aus dem anderen, mit demselben Schwung.']};
 let introT;function intro(){const l=lvl,k=!save.seen.start?'start':l.p.some(q=>q[3]===4)&&!save.seen.sun?'sun':l.p.some(q=>q.length>4)&&!save.seen.moon?'moon':l.w&&!save.seen.warp?'warp':null;
-  const el=$('intro');if(!k){el.hidden=true;return;}save.seen[k]=1;persist();$('inh').textContent=INTRO[k][0];$('inp').textContent=INTRO[k][1];el.hidden=false;clearTimeout(introT);introT=setTimeout(()=>el.hidden=true,10000);}
+  const el=$('intro');if(!k){el.hidden=true;return;}save.seen[k]=1;persist();const tx=v=>typeof v==='function'?v():v;$('inh').textContent=tx(INTRO[k][0]);$('inp').textContent=tx(INTRO[k][1]);el.hidden=false;clearTimeout(introT);introT=setTimeout(()=>el.hidden=true,10000);}
 $('intro').onclick=()=>$('intro').hidden=true;
 
 // ---------- Eingabe ----------
@@ -183,7 +206,8 @@ function vortex(px,py,col,dir){x.save();x.translate(px,py);x.fillStyle=rgba(col,
 function blackHole(hx,hy){x.save();x.translate(hx,hy);
   x.strokeStyle=rgba(C.ring,.25);x.lineWidth=1;for(let k=0;k<2;k++){const f=(anim*.5+k/2)%1;x.globalAlpha=1-f;x.beginPath();x.arc(0,0,30-f*16,0,7);x.stroke();}x.globalAlpha=1;
   x.rotate(anim*.8);x.strokeStyle=C.ring;x.lineWidth=2;x.setLineDash([5,4.4]);x.beginPath();x.arc(0,0,18,0,7);x.stroke();x.setLineDash([]);
-  x.fillStyle='#000';x.beginPath();x.arc(0,0,11,0,7);x.fill();x.strokeStyle=C.ring;x.lineWidth=2.4;x.beginPath();x.arc(0,0,12.4,0,7);x.stroke();x.restore();}
+  x.fillStyle='#000';x.beginPath();x.arc(0,0,11,0,7);x.fill();x.strokeStyle=C.ring;x.lineWidth=2.4;x.beginPath();x.arc(0,0,12.4,0,7);x.stroke();x.restore();
+  if(skin==='halloween')for(let i=0;i<5;i++){const f=(anim*.6+i/5)%1,bx=hx+Math.sin(i*2.3+anim)*8,by=hy-10-f*26;x.strokeStyle=rgba(C.ring,.7*(1-f));x.lineWidth=1.2;x.beginPath();x.arc(bx,by,1.5+f*2.5,0,7);x.stroke();}}
 function drawBall(bx,by,sc){x.fillStyle='rgba('+C.trail+',.18)';x.beginPath();x.arc(bx,by,10*sc,0,7);x.fill();x.fillStyle=C.ball;x.beginPath();x.arc(bx,by,5*sc,0,7);x.fill();}
 const ACC=[.22,.08,.03];
 function render(){const L=lvl,P=planetsAt(L,t);
@@ -195,7 +219,7 @@ function render(){const L=lvl,P=planetsAt(L,t);
   L.p.forEach(q=>{if(q.length<=4)return;const hst=L.p[q[4]];x.strokeStyle='rgba('+C.star+',.12)';x.setLineDash([3,6]);x.beginPath();x.arc(hst[0],hst[1],q[5],0,7);x.stroke();x.setLineDash([]);
     if(st==='aim'){const d=q[6],a=q[7];for(let k=1;k<=2;k++){const b=a+d*(.18+k*.15),px=hst[0]+Math.cos(b)*q[5],py=hst[1]+Math.sin(b)*q[5],tg=b+d*Math.PI/2;x.strokeStyle='rgba('+C.star+','+(.6-k*.17)+')';x.lineWidth=1.5;x.beginPath();x.moveTo(px+Math.cos(tg-2.5)*5,py+Math.sin(tg-2.5)*5);x.lineTo(px,py);x.lineTo(px+Math.cos(tg+2.5)*5,py+Math.sin(tg+2.5)*5);x.stroke();}}});
   if(L.w)L.w.forEach((w,k)=>{const col=C.wh[k%2];vortex(w[0],w[1],col,1);vortex(w[2],w[3],col,-1);x.strokeStyle=rgba(col,.12);x.setLineDash([2,8]);x.beginPath();x.moveTo(w[0],w[1]);x.lineTo(w[2],w[3]);x.stroke();x.setLineDash([]);});
-  P.forEach((p,j)=>{if(p[3]===4)drawSun(p[0],p[1],p[2]);else drawPlanet(looks[j],p[0],p[1],p[2],lightFor(p[0],p[1],P));});
+  P.forEach((p,j)=>{const d=looks[j].d;if(d==='sun')drawSun(p[0],p[1],p[2]);else if(d==='lantern')drawLantern(p[0],p[1],p[2]);else if(d==='ghost')drawGhost(p[0],p[1],p[2],L.p[j][6]);else drawPlanet(looks[j],p[0],p[1],p[2],lightFor(p[0],p[1],P));});
   blackHole(L.h[0],L.h[1]);
   if(st==='aim'){x.strokeStyle='rgba('+C.star+',.35)';x.setLineDash([3,4]);x.lineDashOffset=-anim*8;x.beginPath();x.arc(L.b[0],L.b[1],11,0,7);x.stroke();x.setLineDash([]);x.lineDashOffset=0;}
   trail.forEach((q,i)=>{const f=i/trail.length;x.fillStyle='rgba('+C.trail+','+f*.6+')';x.beginPath();x.arc(q[0],q[1],.6+f*1.8,0,7);x.fill();});
