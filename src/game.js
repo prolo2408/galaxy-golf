@@ -3,6 +3,11 @@ const N=LV.length;
 const TIERS=['Leicht','Mittel','Schwer','Extrem','Kosmos'];
 const $=id=>document.getElementById(id);
 const cv=$('c');x=cv.getContext('2d');
+// iPhone-App vom Home-Bildschirm: iOS meldet dort eine um die Statusleiste zu kurze Höhe, unten bleibt ein Streifen.
+// Dort gilt deshalb die volle Bildschirmhöhe, sonst die sichtbare Höhe des Fensters.
+function appHoehe(){let h=innerHeight;if(navigator.standalone===true&&/iPhone|iPod/.test(navigator.userAgent)){const a=Math.max(screen.width,screen.height),b=Math.min(screen.width,screen.height);h=innerWidth<innerHeight?a:b;}
+  document.documentElement.style.setProperty('--app-h',h+'px');}
+appHoehe();addEventListener('resize',appHoehe);addEventListener('orientationchange',()=>setTimeout(appHoehe,300));
 // iOS Safari ignoriert user-scalable=no: Zoomen per Geste und Doppeltipp abfangen, sonst verrutscht die Seite seitlich
 ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});

@@ -30,7 +30,8 @@
 }
 [hidden]{display:none!important}
 html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
-html{background:var(--feld,var(--void))}
+html{background:var(--feld,var(--void));height:var(--app-h,100%)}
+body{height:100%}
 body{margin:0;background:var(--void);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 input,select,textarea{-webkit-user-select:text;user-select:text}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -104,7 +105,7 @@ kbd{font-family:var(--display);font-size:11px;border:1px solid var(--line);borde
 .side .keys{margin:0;font-size:13px;line-height:2;color:var(--dim)}
 
 /* ---------- Startbildschirm ---------- */
-.home{position:fixed;inset:0;z-index:5;background:var(--feld,var(--void));overflow:hidden}
+.home{position:fixed;inset:0 0 auto 0;height:var(--app-h,100%);z-index:5;background:var(--feld,var(--void));overflow:hidden}
 #hcv{position:absolute;inset:0;width:100%;height:100%}
 .hinhalt{position:relative;box-sizing:border-box;height:100%;overflow-y:auto;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:12px;
   padding:max(18px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(18px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -144,7 +145,7 @@ kbd{font-family:var(--display);font-size:11px;border:1px solid var(--line);borde
 .notiz .row button{flex:1}
 
 /* ---------- Seiten ---------- */
-.scr{position:fixed;inset:0;z-index:6;background:var(--void);display:grid;grid-template-rows:auto minmax(0,1fr)}
+.scr{position:fixed;inset:0 0 auto 0;height:var(--app-h,100%);z-index:6;background:var(--void);display:grid;grid-template-rows:auto minmax(0,1fr)}
 .skopf{display:flex;align-items:center;gap:12px;padding:max(10px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
 .skopf h2{flex:1;margin:0;font-family:var(--display);font-weight:600;font-size:20px}
 .zur{flex:none;padding:10px 14px}
@@ -811,6 +812,11 @@ const N=LV.length;
 const TIERS=['Leicht','Mittel','Schwer','Extrem','Kosmos'];
 const $=id=>document.getElementById(id);
 const cv=$('c');x=cv.getContext('2d');
+// iPhone-App vom Home-Bildschirm: iOS meldet dort eine um die Statusleiste zu kurze Höhe, unten bleibt ein Streifen.
+// Dort gilt deshalb die volle Bildschirmhöhe, sonst die sichtbare Höhe des Fensters.
+function appHoehe(){let h=innerHeight;if(navigator.standalone===true&&/iPhone|iPod/.test(navigator.userAgent)){const a=Math.max(screen.width,screen.height),b=Math.min(screen.width,screen.height);h=innerWidth<innerHeight?a:b;}
+  document.documentElement.style.setProperty('--app-h',h+'px');}
+appHoehe();addEventListener('resize',appHoehe);addEventListener('orientationchange',()=>setTimeout(appHoehe,300));
 // iOS Safari ignoriert user-scalable=no: Zoomen per Geste und Doppeltipp abfangen, sonst verrutscht die Seite seitlich
 ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
