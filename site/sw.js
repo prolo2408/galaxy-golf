@@ -1,4 +1,4 @@
-const CACHE = 'galaxy-golf-v5';
+const CACHE = 'galaxy-golf-v6';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -25,6 +25,8 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (url.origin !== location.origin) return;
+  // Spielstände, Codes, Admin: immer direkt zum Server, nie aus dem Cache
+  if (url.pathname.startsWith('/api/')) return;
   // Eigene Dateien: erst Netz (damit Updates ankommen), offline aus dem Cache
   e.respondWith(fetch(req).then(r => {
     if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }

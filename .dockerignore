@@ -1,4 +1,6 @@
-src
-tools
 .git
+tools
 README.md
+src/*.json
+src/*.html
+src/*.css

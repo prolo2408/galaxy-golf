@@ -7,7 +7,7 @@
     <div class="stats">
       <div class="stat"><small>Par</small><b id="par">2</b></div>
       <div class="stat"><small>Schläge</small><b id="sh">0</b></div>
-      <div class="stat"><small>Sterne</small><b id="stars">0</b></div>
+      <div class="stat"><small>Münzen</small><b id="mz">0</b></div>
     </div>
   </header>
   <aside class="side">
@@ -15,20 +15,32 @@
       <li><i class="dot pl"></i>Alles zieht an, große und dichte Planeten am stärksten</li>
       <li><i class="dot su"></i><span id="lgsun">Sonnen ziehen sehr stark, zu nah verglüht die Kugel</span></li>
       <li><i class="dot mo"></i><span id="lgmoon">Monde kreisen um ihren Planeten</span></li>
+      <li><i class="dot wi"></i>Sonnenwind schiebt die Kugel in Pfeilrichtung</li>
       <li><i class="dot wh"></i>Wurmlöcher verbinden zwei Orte</li>
       <li><i class="dot bh"></i>Ziel ist das Schwarze Loch</li>
     </ul>
-    <p class="keys">Maus ziehen und loslassen<br><kbd>T</kbd> Tipp &nbsp; <kbd>R</kbd> Neu &nbsp; <kbd>M</kbd> Bahnen<br><kbd>Enter</kbd> nächste Bahn</p>
+    <p class="keys">Maus ziehen und loslassen<br><kbd>T</kbd> Tipp &nbsp; <kbd>R</kbd> Kugel zurück &nbsp; <kbd>M</kbd> Bahnen<br><kbd>Enter</kbd> weiter &nbsp; <kbd>Esc</kbd> Start</p>
   </aside>
   <main class="field" id="field">
     <canvas id="c" aria-label="Spielfeld: zurückziehen und loslassen, um die Kugel abzuschießen"></canvas>
-    <div class="msg" id="msg"></div>
+    <div class="msg" id="msg" role="status"></div>
     <div class="intro" id="intro" hidden><b id="inh"></b><span id="inp"></span></div>
     <div class="overlay" id="ov" hidden><div class="card" id="card"></div></div>
   </main>
   <nav class="bar">
+    <button id="start" type="button">Start</button>
     <button id="menu" type="button">Bahnen</button>
     <button id="tip" type="button">Tipp</button>
     <button id="reset" type="button">Neu</button>
   </nav>
 </div>
+<section class="home" id="home" hidden>
+  <canvas id="hcv" aria-hidden="true"></canvas>
+  <div class="hinhalt" id="hinhalt"></div>
+</section>
+<section class="scr" id="scr" hidden>
+  <header class="skopf"><button type="button" class="zur" id="zur">Zurück</button><h2 id="stitel"></h2><span class="smz" id="smz"></span></header>
+  <div class="sinhalt" id="sinhalt"></div>
+</section>
+<div class="dialog" id="dialog" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>

@@ -5,3 +5,17 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    environment:
+      # Dein Admin-Passwort (mindestens 8 Zeichen). Setzen auf der Prolo-Admin-Seite:
+      # Tool golf → Bearbeiten → Variablen setzen:  GG_ADMIN_PASSWORT=...
+      GG_ADMIN_PASSWORT: ${GG_ADMIN_PASSWORT:-}
+    volumes:
+      - daten:/data
+    mem_limit: 192m
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  daten: {}
