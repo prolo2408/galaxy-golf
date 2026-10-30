@@ -6,8 +6,9 @@ Weltraum-Minigolf mit echter Schwerkraft (Newton: Masse wächst mit Dichte und R
 - **Tagesbahn**: jeden Tag eine neue, für alle gleich (Vorrat für ein Jahr).
 - **Endlos**: Bahnen werden im Browser frisch gebaut und mit der Physik geprüft, immer schwerer. Pro Bahn Par + 2 Schläge.
 - **Münzen** für Sterne (4 je Stern), Asse ohne Tipp (15), die Tagesbahn (15 + 5 je Stern) und drei **Tagesaufgaben**. Bisherige Sterne zählen rückwirkend.
-- **Shop**: Kugeln, Flugspuren, Ziel-Löcher und Looks (Nebula, Frost, Neon), die alle Himmelskörper nach festen Regeln umgestalten.
-- **Events**: Wer im Zeitraum spielt, bekommt Abzeichen und Event-Sachen für immer, etwa *Halloween 2026* (10.10. bis 03.11.). Die Sammlung zeigt, seit wann man dabei ist.
+- **Shop** mit Reitern: *Event* (Banner mit Countdown, Event-Sachen gratis abholen), *Angebote* (jeden Tag drei Sachen 25 % günstiger, für alle gleich) und die Fächer Kugel, Spur, Loch, Look. Karten zeigen die Seltenheit (Gewöhnlich, Selten, Episch, Legendär, Event).
+- **Inventar** mit vier Plätzen: Platz antippen, aus den eigenen Sachen wählen, oben fliegt die Ausrüstung zur Probe.
+- **Events**: Wer im Zeitraum im Shop vorbeischaut, holt Abzeichen und Event-Sachen gratis ab und behält sie für immer, etwa *Halloween 2026* (10.10. bis 03.11.). Das Profil in den Einstellungen zeigt, seit wann man dabei ist.
 - **Konten** mit Name und PIN: Spielstand auf dem Server, auf jedes Handy mitnehmbar. **Geschenk-Codes** und ein **Admin-Bereich** nur für dich.
 - Auf dem Handy hochkant, am Rechner quer mit Seitenleiste. Als App installierbar (PWA), spielbar auch offline.
 
@@ -59,7 +60,7 @@ Der Server prüft Passwort und Codes; im Spiel selbst steht nichts davon. Beim V
 | `src/stand.js` | Spielstand, Shop-Katalog, Events, Tagesaufgaben, Münzen, Zusammenführen – gemeinsam für Spiel und Server |
 | `src/look.js` | Looks, Planeten, Kugeln, Spuren, Löcher, Hintergrund |
 | `src/game.js` | Spielfeld, Modi, Eingabe |
-| `src/ui.js` | Startbildschirm, Shop, Sammlung, Einstellungen, Konto, Admin, Abgleich |
+| `src/ui.js` | Startbildschirm, Inventar, Shop, Einstellungen mit Profil, Konto, Admin, Abgleich |
 | `src/levels.json` | Kampagne mit Stufe, Par und Lösungsschuss für den Tipp |
 | `src/tages.json` | Vorrat für die Tagesbahn |
 | `server/server.js` | Server (nur Node-Standardbibliothek): liefert `site/` aus, Konten, Abgleich, Codes, Admin |

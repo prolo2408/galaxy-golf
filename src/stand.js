@@ -45,11 +45,16 @@ function aufgabenFuer(tag){let h=2166136261;for(const c of tag)h=Math.imul(h^c.c
 // ---------- Münzen ----------
 const MZ={stern:4,ass:15,tagBasis:15,tagStern:5};
 function preis(id){return ITEM[id]&&ITEM[id].p||0;}
+// Tagesangebote: jeden Tag drei Sachen 25 % günstiger, für alle gleich
+function angebote(tag){let h=2166136261;for(const c of 'angebot'+tag)h=Math.imul(h^c.charCodeAt(0),16777619);
+  const ids=ITEMS.filter(i=>i.p).map(i=>i.id);for(let i=ids.length-1;i>0;i--){h=Math.imul(h^(h>>>13),3266489917)>>>0;const j=h%(i+1);[ids[i],ids[j]]=[ids[j],ids[i]];}
+  return ids.slice(0,3).map(id=>({id,p:Math.round(preis(id)*.75/10)*10}));}
+function bezahlt(id,o){return typeof o.p==='number'?o.p:preis(id);}
 function muenzen(st){let m=st.bonus|0;
   for(const k in st.best){const b=st.best[k];m+=b.st*MZ.stern+(b.a?MZ.ass:0);}
   for(const d in st.tag)m+=MZ.tagBasis+MZ.tagStern*st.tag[d].st;
   for(const d in st.auf){const a=st.auf[d];for(const id of aufgabenFuer(d))if((a[id]|0)>=AUFG[id].z)m+=AUFG[id].m;}
-  for(const id in st.own)if(st.own[id].w==='kauf')m-=preis(id);
+  for(const id in st.own)if(st.own[id].w==='kauf')m-=bezahlt(id,st.own[id]);
   return m;}
 
 // ---------- Datum ----------
@@ -75,7 +80,7 @@ function sauber(x,N){const s=neuerStand();if(!x||typeof x!=='object')return s;co
   s.t=int(x.t,0,Date.now()+864e5,0);s.un=int(x.un,3,N,3);s.cur=int(x.cur,0,N-1,0);s.bonus=int(x.bonus,-1e7,1e7,0);
   if(x.best&&typeof x.best==='object')for(const k in x.best){const n=+k,b=x.best[k];if(!(n>=1&&n<=N)||!b)continue;const o={s:int(b.s,1,999,99),st:int(b.st,1,3,1)};if(b.a&&o.s===1)o.a=1;s.best[n]=o;}
   if(x.seen&&typeof x.seen==='object')for(const k of SEEN)if(x.seen[k])s.seen[k]=1;
-  if(x.own&&typeof x.own==='object')for(const id in x.own){const o=x.own[id];if(!istBekannt(id)||!o||!['kauf','event','geschenk','code'].includes(o.w)||!DATUM.test(o.d))continue;s.own[id]={w:o.w,d:o.d};}
+  if(x.own&&typeof x.own==='object')for(const id in x.own){const o=x.own[id];if(!istBekannt(id)||!o||!['kauf','event','geschenk','code'].includes(o.w)||!DATUM.test(o.d))continue;s.own[id]={w:o.w,d:o.d};if(o.w==='kauf'&&Number.isInteger(o.p)&&o.p>=0&&o.p<preis(id))s.own[id].p=o.p;}
   if(x.eq&&typeof x.eq==='object')for(const f in STANDARD){const id=x.eq[f];if(typeof id==='string'&&ITEM[id]&&ITEM[id].f===f&&(s.own[id]||id===STANDARD[f]))s.eq[f]=id;}
   if(x.tag&&typeof x.tag==='object')for(const d of Object.keys(x.tag).filter(d=>DATUM.test(d)).sort().slice(-1000)){const b=x.tag[d];if(b)s.tag[d]={s:int(b.s,1,999,99),st:int(b.st,1,3,1)};}
   if(x.auf&&typeof x.auf==='object')for(const d of Object.keys(x.auf).filter(d=>DATUM.test(d)).sort().slice(-1000)){const a=x.auf[d];if(!a||typeof a!=='object')continue;const o={};for(const id of aufgabenFuer(d))if(a[id])o[id]=int(a[id],0,AUFG[id].z,0);s.auf[d]=o;}
@@ -91,7 +96,7 @@ function zusammen(a,b){const r=neuerStand(),neu=(b.t||0)>=(a.t||0)?b:a;
   for(const s of[a,b]){
     for(const k in s.best){const x=s.best[k],y=r.best[k];r.best[k]=y?{s:Math.min(x.s,y.s),st:Math.max(x.st,y.st)}:{s:x.s,st:x.st};if(x.a||(y&&y.a))r.best[k].a=1;}
     for(const k in s.seen)r.seen[k]=1;
-    for(const id in s.own){const x=s.own[id],y=r.own[id];if(!y||x.d<y.d)r.own[id]={w:x.w,d:x.d};}
+    for(const id in s.own){const x=s.own[id],y=r.own[id];if(!y||x.d<y.d){r.own[id]={w:x.w,d:x.d};if(typeof x.p==='number')r.own[id].p=x.p;}}
     for(const d in s.tag){const x=s.tag[d],y=r.tag[d];r.tag[d]=y?{s:Math.min(x.s,y.s),st:Math.max(x.st,y.st)}:{s:x.s,st:x.st};}
     for(const d in s.auf){const o=r.auf[d]||(r.auf[d]={});for(const id in s.auf[d])o[id]=Math.max(o[id]|0,s.auf[d][id]|0);}
     r.endl.best=Math.max(r.endl.best,s.endl.best|0);}

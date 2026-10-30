@@ -6,7 +6,7 @@ const BASIS=path.join(__dirname,'..'),SITE=path.join(BASIS,'site'),DATEN=process
 const PORT=+(process.env.PORT||80),TZ='Europe/Berlin';
 const ADMIN=String(process.env.GG_ADMIN_PASSWORT||'').trim();
 const ST=new Function(fs.readFileSync(path.join(BASIS,'src/stand.js'),'utf8')+
-  ';return{ITEM,EVENT,evItems,istBekannt,muenzen,sauber,zusammen,neuerStand,datum,imEvent};')();
+  ';return{ITEM,EVENT,evItems,istBekannt,muenzen,sauber,zusammen,neuerStand,datum,imEvent,angebote};')();
 const N=JSON.parse(fs.readFileSync(path.join(__dirname,'info.json'),'utf8')).n;
 
 // ---------- Daten ----------
@@ -29,7 +29,7 @@ const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
 const zufall=n=>crypto.randomBytes(n).toString('base64url');
 function gleich(a,b){const x=Buffer.from(hash(String(a))),y=Buffer.from(hash(String(b)));return crypto.timingSafeEqual(x,y);}
 function pinHash(pin,salz){return crypto.scryptSync(pin,salz,32).toString('hex');}
-const heute=()=>ST.datum(null,TZ),morgen=()=>ST.datum(new Date(Date.now()+864e5),TZ);
+const heute=()=>ST.datum(null,TZ),morgen=()=>ST.datum(new Date(Date.now()+864e5),TZ),gestern=()=>ST.datum(new Date(Date.now()-864e5),TZ);
 function ip(req){const x=String(req.headers['x-forwarded-for']||'').split(',').map(s=>s.trim()).filter(Boolean);return x.length?x[x.length-1]:req.socket.remoteAddress||'?';}
 // Bremse für Fehlversuche je Adresse: zu viele in 10 Minuten → warten
 const bremse=new Map();
@@ -45,7 +45,9 @@ function vomGeraet(x,alt){const s=ST.sauber(x,N),m=morgen();
   for(const id in s.own){if(alt&&alt.own[id])continue;const o=s.own[id];
     if(o.w==='geschenk'||o.w==='code')delete s.own[id];
     else if(o.w==='event'){const e=eventVon(id);if(!e||!ST.imEvent(e,o.d)||o.d>m)delete s.own[id];}
-    else if(o.w==='kauf'&&!(ST.ITEM[id]&&ST.ITEM[id].p))delete s.own[id];}
+    else if(o.w==='kauf'&&!(ST.ITEM[id]&&ST.ITEM[id].p))delete s.own[id];
+    // Angebotspreis nur, wenn es an dem Tag (± ein Tag Zeitzone) wirklich das Angebot war, sonst gilt der volle Preis
+    else if(o.w==='kauf'&&typeof o.p==='number'&&!(o.d>=gestern()&&o.d<=m&&ST.angebote(o.d).some(a=>a.id===id&&a.p===o.p)))delete o.p;}
   for(const d in s.tag)if(d>m)delete s.tag[d];
   for(const d in s.auf)if(d>m)delete s.auf[d];
   s.bonus=alt?alt.bonus|0:0;

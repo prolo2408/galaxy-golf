@@ -12,14 +12,11 @@ function ladeStand(){try{const s=JSON.parse(localStorage.getItem('gg5')||'null')
   try{const a=JSON.parse(localStorage.getItem('gg4')||'null');if(a)return ausAlt(a,N,datum());}catch(e){}return neuerStand();}
 let st=ladeStand();
 function persist(){st.t=Date.now();try{localStorage.setItem('gg5',JSON.stringify(st));}catch(e){}syncBald();}
-// Events: wer im Zeitraum spielt, bekommt Abzeichen und Sachen. Der Event-Look wird angelegt und danach wieder abgelegt.
-function eventsPruefen(){const d=datum(),neu=[];
-  for(const e of EVENTS){if(!imEvent(e,d))continue;
-    if(!st.own['e-'+e.id]){for(const id of evItems(e.id))if(!st.own[id])st.own[id]={w:'event',d};neu.push(e);}
-    if(e.look&&st.own[e.look]&&!st.auto&&st.eq.o!==e.look&&!st.seen['ev-'+e.id]){st.auto={look:e.look,vorher:st.eq.o};st.eq.o=e.look;}
-    st.seen['ev-'+e.id]=1;}
-  let vorbei=null;if(st.auto&&!EVENTS.some(e=>e.look===st.auto.look&&imEvent(e,d))){if(st.eq.o===st.auto.look){vorbei=ITEM[st.auto.look].n;st.eq.o=st.auto.vorher;}st.auto=null;}
-  if(neu.length||vorbei)persist();return{neu,vorbei};}
+// Events holt man im Shop ab. Ein Event-Look, der beim Abholen angelegt wurde, wird nach dem Event wieder abgelegt.
+function eventsPruefen(){const d=datum();let vorbei=null;
+  if(st.auto&&!EVENTS.some(e=>e.look===st.auto.look&&imEvent(e,d))){if(st.eq.o===st.auto.look){vorbei=ITEM[st.auto.look].n;st.eq.o=st.auto.vorher;}st.auto=null;persist();}
+  return{vorbei};}
+const offeneEvents=()=>EVENTS.filter(e=>imEvent(e,datum())&&!st.own['e-'+e.id]);
 SEEN.push(...EVENTS.map(e=>'ev-'+e.id));
 
 // ---------- Größe und Ausrichtung ----------
@@ -195,4 +192,5 @@ function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;anim+=dt;
     if(lvl){fxStep(dt,lvl.W,lvl.H);if(cv.width)render();}}
   else if(homeSichtbar())homeFrame(dt);
   else if(ansicht==='inv')invFrame();
+  else if(ansicht==='shop')shopFrame(dt);
   requestAnimationFrame(frame);}

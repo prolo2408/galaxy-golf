@@ -2,7 +2,7 @@
 // Erwartungswerte sind von Hand gerechnet, nicht aus dem Code übernommen.
 const fs=require("fs"),path=require("path"),os=require("os"),{spawn}=require("child_process"),assert=require("assert");
 const W=path.join(__dirname,"..");
-const ST=new Function(fs.readFileSync(path.join(W,"src/stand.js"),"utf8")+";return{ITEM,EVENT,AUFG,aufgabenFuer,muenzen,sauber,zusammen,neuerStand,ausAlt,evItems};")();
+const ST=new Function(fs.readFileSync(path.join(W,"src/stand.js"),"utf8")+";return{ITEM,EVENT,AUFG,aufgabenFuer,muenzen,sauber,zusammen,neuerStand,ausAlt,evItems,angebote};")();
 let n=0;const ok=(name,fn)=>Promise.resolve().then(fn).then(()=>{n++;console.log("ok  ",name);},e=>{console.error("FEHLER",name,"\n",e);process.exitCode=1;});
 
 async function logik(){
@@ -15,6 +15,12 @@ async function logik(){
     const id=ST.aufgabenFuer("2026-10-31")[0];s.auf={"2026-10-31":{[id]:ST.AUFG[id].z}}; // + Belohnung
     s.bonus=100;s.own={"k-mond":{w:"kauf",d:"2026-10-31"},"k-kuerbis":{w:"event",d:"2026-10-31"}}; // −150, Event kostet nichts
     assert.strictEqual(ST.muenzen(s),35+25+ST.AUFG[id].m+100-150);});
+  await ok("Tagesangebote: drei Sachen, 25 % günstiger, auf zehn gerundet; gezahlt wird der Angebotspreis",()=>{const a=ST.angebote("2026-10-30");
+    assert.strictEqual(a.length,3);assert.strictEqual(new Set(a.map(x=>x.id)).size,3);
+    for(const x of a){const p=ST.ITEM[x.id].p;assert.ok(x.p<p&&x.p%10===0&&Math.abs(x.p-p*.75)<=5,x.id+" "+x.p);}
+    const s=ST.neuerStand();s.bonus=1000;s.own={"k-gold":{w:"kauf",d:"2026-10-30",p:450}};assert.strictEqual(ST.muenzen(s),550);
+    assert.strictEqual(ST.sauber(s,420).own["k-gold"].p,450);assert.strictEqual(ST.zusammen(ST.neuerStand(),s).own["k-gold"].p,450);
+    s.own["k-gold"].p=600;assert.strictEqual(ST.sauber(s,420).own["k-gold"].p,undefined,"voller Preis wird nicht als Rabatt gespeichert");});
   await ok("Münzen: halbe Aufgabe zählt nicht, fremde Aufgabe zählt nicht",()=>{const s=ST.neuerStand(),d="2026-11-02",ids=ST.aufgabenFuer(d);
     const fremd=Object.keys(ST.AUFG).find(k=>!ids.includes(k));s.auf={[d]:{[ids[0]]:ST.AUFG[ids[0]].z-1,[fremd]:99}};assert.strictEqual(ST.muenzen(s),0);});
   await ok("Zusammenführen: Bestes gewinnt, Besitz vereinigt, Bonus vom Server, Einstellungen vom neueren",()=>{
@@ -84,6 +90,12 @@ async function api(){daten=fs.mkdtempSync(path.join(os.tmpdir(),"gg-test-"));awa
   await ok("Admin: schenken, alle Bahnen, neue PIN",async()=>{const u=await req("GET","/api/admin",null,admin),lena=u.j.spieler.find(p=>p.name==="Lena");
     assert.strictEqual((await req("POST","/api/admin/schenken",{id:lena.id,muenzen:1000,alleBahnen:true,items:["o-neon","k-quatsch"]},admin)).s,200);
     const s=await req("POST","/api/sync",{stand:{}},auth(B));assert.strictEqual(s.j.stand.un,420);assert.strictEqual(s.j.stand.bonus,1250);assert.strictEqual(s.j.stand.own["o-neon"].w,"geschenk");assert.ok(!s.j.stand.own["k-quatsch"]);
+    // Angebot von heute: Angebotspreis; erfundener Rabatt: voller Preis
+    const hat=(await req("POST","/api/sync",{stand:{}},auth(B))).j.stand.own,ang=ST.angebote(heute).find(a=>!hat[a.id]&&a.id!=="k-saturn");
+    const k1=await req("POST","/api/sync",{stand:{t:Date.now(),own:{[ang.id]:{w:"kauf",d:heute,p:ang.p}}}},auth(B));assert.strictEqual(k1.j.stand.own[ang.id].p,ang.p);assert.strictEqual(k1.j.muenzen,1250-ang.p);
+    const fremd=Object.keys(ST.ITEM).find(id=>ST.ITEM[id].p&&!ST.angebote(heute).some(a=>a.id===id)&&id!=="k-saturn");
+    const k2=await req("POST","/api/sync",{stand:{t:Date.now(),own:{[fremd]:{w:"kauf",d:heute,p:10}}}},auth(B));assert.strictEqual(k2.j.stand.own[fremd].p,undefined);assert.strictEqual(k2.j.muenzen,1250-ang.p-ST.ITEM[fremd].p);
+    await req("POST","/api/admin/schenken",{id:lena.id,muenzen:ang.p+ST.ITEM[fremd].p},admin);
     // Lena kann jetzt mit ihren Münzen kaufen
     const k=await req("POST","/api/sync",{stand:{t:Date.now(),own:{"k-saturn":{w:"kauf",d:heute}},eq:{k:"k-saturn"}}},auth(B));assert.strictEqual(k.j.stand.own["k-saturn"].w,"kauf");assert.strictEqual(k.j.stand.eq.k,"k-saturn");assert.strictEqual(k.j.muenzen,1250-350);
     assert.strictEqual((await req("POST","/api/admin/pin",{id:lena.id,pin:"777777"},admin)).s,200);assert.strictEqual((await req("POST","/api/anmelden",{name:"lena",pin:"777777"})).s,200);});
