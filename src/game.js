@@ -194,4 +194,5 @@ function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;anim+=dt;
     for(const p of parts){p.x+=p.vx*dt*60;p.y+=p.vy*dt*60;p.vx*=.96;p.vy*=.96;p.l-=dt/p.d;}parts=parts.filter(p=>p.l>0);
     if(lvl){fxStep(dt,lvl.W,lvl.H);if(cv.width)render();}}
   else if(homeSichtbar())homeFrame(dt);
+  else if(ansicht==='inv')invFrame();
   requestAnimationFrame(frame);}

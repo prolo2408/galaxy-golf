@@ -22,18 +22,18 @@ addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'
 setInterval(()=>{if(document.visibilityState==='visible')sync();},120000);
 
 // ---------- Navigation ----------
-let ansicht='spiel',zurueckZu='home';
+let ansicht='spiel',stapel=[];
 const spielSichtbar=()=>ansicht==='spiel',homeSichtbar=()=>ansicht==='home';
-function zeige(a,arg){if(ansicht==='admin'&&a!=='admin')adminAbmelden();ansicht=a;
+// Seiten merken sich, woher man kam: „Zurück“ führt genau dorthin, vom Startbildschirm aus immer zum Start
+function zeige(a,arg,zurueck){const vor=ansicht;if(vor==='admin'&&a!=='admin')adminAbmelden();ansicht=a;
   $('home').hidden=a!=='home';$('scr').hidden=a==='spiel'||a==='home';
-  if(a==='spiel'){if(lvl){ui();size();}return;}
-  if(a==='home')return renderHome();
-  zurueckZu=a==='admin'||a==='konto'?'einst':'home';
-  const T={shop:'Shop',samml:'Sammlung',einst:'Einstellungen',konto:'Konto',admin:'Admin'};$('stitel').textContent=T[a];
-  $('sinhalt').scrollTop=0;({shop:renderShop,samml:renderSammlung,einst:renderEinst,konto:renderKonto,admin:renderAdmin})[a](arg);}
-$('zur').onclick=()=>zeige(zurueckZu);
+  if(a==='spiel'||a==='home'){stapel=[];if(a==='home')renderHome();else if(lvl){ui();size();}return;}
+  if(!zurueck&&vor!==a&&vor!=='home'&&vor!=='spiel')stapel.push(vor);
+  const T={inv:'Inventar',shop:'Shop',samml:'Sammlung',einst:'Einstellungen',konto:'Konto',admin:'Admin'};$('stitel').textContent=T[a];
+  $('sinhalt').scrollTop=0;({inv:renderInv,shop:renderShop,samml:renderSammlung,einst:renderEinst,konto:renderKonto,admin:renderAdmin})[a](arg);}
+$('zur').onclick=()=>zeige(stapel.pop()||'home',undefined,true);
 function muenzAnzeige(){$('smz').innerHTML=COIN+zahl(muenzen(st));}
-function aktualisieren(){muenzAnzeige();if(ansicht==='home')renderHome();else if(ansicht==='einst'&&!$('e-code')?.value&&document.activeElement?.tagName!=='INPUT')renderEinst();else if(ansicht==='shop')renderShop();else if(ansicht==='samml')renderSammlung();}
+function aktualisieren(){muenzAnzeige();if(ansicht==='home')renderHome();else if(ansicht==='einst'&&!$('e-code')?.value&&document.activeElement?.tagName!=='INPUT')renderEinst();else if(ansicht==='shop')renderShop();else if(ansicht==='inv')renderInv();else if(ansicht==='samml')renderSammlung();}
 let toastT;function toast(s){const t=$('toast');t.textContent=s;t.hidden=false;t.classList.add('an');clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('an');},3200);}
 function fragen(titel,text,ja,fn){const d=$('dialog');d.innerHTML='<div class="dkarte" role="dialog" aria-modal="true" aria-labelledby="dtitel"><h3 id="dtitel">'+titel+'</h3><p>'+text+'</p><div class="row"><button type="button" id="dnein">Abbrechen</button><button type="button" class="go" id="dja">'+ja+'</button></div></div>';
   d.hidden=false;$('dnein').onclick=()=>d.hidden=true;$('dja').onclick=()=>{d.hidden=true;fn();};$('dja').focus();}
@@ -52,12 +52,12 @@ function renderHome(){const d=datum(),tg=st.tag[d],a=st.auf[d]||{},ids=aufgabenF
   h+='<div class="hrow"><button type="button" id="h-tages">Tagesbahn<small>'+(tg?'<span class="st">'+'★'.repeat(tg.st)+'<i>'+'★'.repeat(3-tg.st)+'</i></span>':'neu heute')+'</small></button><button type="button" id="h-endlos">Endlos<small>Rekord '+st.endl.best+'</small></button></div>';
   h+='<section class="aufg" aria-labelledby="aufg-h"><h2 id="aufg-h">Tagesaufgaben</h2><ul>'+ids.map(id=>{const A=AUFG[id],v=Math.min(A.z,a[id]|0),ok=v>=A.z;
     return'<li class="'+(ok?'ok':'')+'"><span class="chk" aria-hidden="true"></span><span class="at">'+esc(A.t)+(ok?'<span class="sr"> – geschafft</span>':'')+'</span><span class="ap">'+(A.z>1?v+'/'+A.z:'')+'</span><span class="am">+'+A.m+'</span></li>';}).join('')+'</ul></section>';
-  h+='<nav class="hrow3"><button type="button" id="h-shop">Shop</button><button type="button" id="h-samml">Sammlung</button><button type="button" id="h-einst">Einstellungen</button></nav>';
+  h+='<nav class="hnav"><button type="button" id="h-inv">Inventar</button><button type="button" id="h-shop">Shop</button><button type="button" id="h-samml">Sammlung</button><button type="button" id="h-einst">Einstellungen</button></nav>';
   $('hinhalt').innerHTML=h;
   $('h-weiter').onclick=()=>{zeige('spiel');if(modus!=='kampagne'||!bahn||zust==='won'||bahn!==LV[weiterIndex()]&&st.best[li+1])load(weiterIndex());};
   $('h-tages').onclick=()=>{zeige('spiel');if(modus!=='tages'||tagKey!==datum())startTages();};
   $('h-endlos').onclick=()=>{zeige('spiel');if(!lauf)startEndlos();};
-  $('h-shop').onclick=$('h-mz').onclick=()=>zeige('shop');$('h-samml').onclick=()=>zeige('samml');$('h-einst').onclick=()=>zeige('einst');
+  $('h-shop').onclick=$('h-mz').onclick=()=>zeige('shop');$('h-samml').onclick=()=>zeige('samml');$('h-inv').onclick=()=>zeige('inv');$('h-einst').onclick=()=>zeige('einst');
   if($('h-ok'))$('h-ok').onclick=()=>{hinweis=null;renderHome();};
   if($('h-spaeter'))$('h-spaeter').onclick=()=>{try{localStorage.setItem('gg-willkommen','1');}catch(e){}renderHome();};
   if($('h-konto'))$('h-konto').onclick=()=>zeige('konto');
@@ -83,7 +83,8 @@ function vorschau(c,id){const i=ITEM[id],g=c.getContext('2d'),w=c.width,h=c.heig
     else if(i.f==='l'){x.translate(60,48);x.scale(1.3,1.3);(LOECHER[id])(0,0);}
     else{const P=[[30,34,15,4],[86,58,13,2],[86+22,58-14,5,1],[38,78,9,3]],L=mkLooks({p:[[0,0,15,4],[0,0,13,2],[0,0,5,1,1,26,1,0],[0,0,9,1]]},3);
       P.forEach((p,j)=>drawBody(L[j],p,P,1));lochStandard(96,20);}}));}
-function status(id){const i=ITEM[id];if(st.eq[i.f]===id)return['an','Angelegt'];if(st.own[id]||!i.p&&!i.ev)return['hat','Anlegen'];
+const besitzt=id=>!!st.own[id]||(!ITEM[id].p&&!ITEM[id].ev);
+function status(id){const i=ITEM[id];if(st.eq[i.f]===id)return['an','Angelegt'];if(besitzt(id))return['hat','Im Inventar'];
   if(i.ev)return['zu','Nur beim Event '+EVENT[i.ev].n];return['kauf',COIN+zahl(i.p)];}
 function renderShop(){const m=muenzen(st);
   let h='<div class="tabs4" role="tablist">'+FAECHER.map(([f,n])=>'<button type="button" role="tab" data-f="'+f+'" aria-selected="'+(f===shopFach)+'">'+n+'</button>').join('')+'</div><div class="sgrid">';
@@ -93,11 +94,35 @@ function renderShop(){const m=muenzen(st);
   $('sinhalt').querySelectorAll('.item').forEach(b=>{vorschau(b.querySelector('canvas'),b.dataset.id);b.onclick=()=>shopKlick(b.dataset.id,m);});}
 function anlegen(id){const i=ITEM[id];st.eq[i.f]=id;if(i.f==='o'){st.auto=null;setzeLook(id);bg=null;hScene=null;if(bahn)looks=mkLooks(bahn,modus==='kampagne'?li:modus==='tages'?100000+tagIndex(tagKey):lauf?lauf.seed%99991+lauf.n:0);}persist();}
 function shopKlick(id,m){const i=ITEM[id],[k]=status(id);
-  if(k==='an')return toast(i.n+' ist schon angelegt.');
-  if(k==='hat'){anlegen(id);toast(i.n+' angelegt.');return renderShop();}
+  if(k==='an'||k==='hat')return zeige('inv',i.f);
   if(k==='zu')return toast(i.n+' gibt es nur beim Event '+EVENT[i.ev].n+'.');
   if(m<i.p)return toast('Dir fehlen noch '+zahl(i.p-m)+' Münzen für '+i.n+'.');
   fragen(esc(i.n)+' kaufen?','Kostet '+zahl(i.p)+' Münzen. Danach hast du noch '+zahl(m-i.p)+'.','Kaufen',()=>{st.own[id]={w:'kauf',d:datum()};anlegen(id);toast(i.n+' gekauft und angelegt.');renderShop();sync();});}
+
+// ---------- Inventar ----------
+// Vier Plätze wie ein Spind: Platz antippen, dann aus den eigenen Sachen wählen. Oben fliegt die Ausrüstung zur Probe.
+let invFach='k',invSz=null;
+function renderInv(f){if(f)invFach=f;const alle=ITEMS.filter(i=>i.f===invFach),mein=alle.filter(i=>besitzt(i.id)),fehlt=alle.length-mein.length,name=FAECHER.find(x=>x[0]===invFach)[1];
+  let h='<canvas class="invbild" id="invcv" role="img" aria-label="Vorschau: '+esc(FAECHER.map(([f])=>ITEM[st.eq[f]].n).join(', '))+'"></canvas><div class="slots" role="tablist" aria-label="Plätze">';
+  for(const[f,n]of FAECHER)h+='<button type="button" role="tab" class="slot" data-slot="'+f+'" aria-selected="'+(f===invFach)+'"><canvas width="240" height="192" aria-hidden="true"></canvas><span>'+n+'</span><b>'+esc(ITEM[st.eq[f]].n)+'</b></button>';
+  h+='</div><h3 class="sub2">'+name+' wählen <small>'+mein.length+' von '+alle.length+'</small></h3><div class="sgrid">';
+  for(const i of mein){const an=st.eq[invFach]===i.id;h+='<button type="button" class="item '+(an?'an':'hat')+'" data-id="'+i.id+'" aria-pressed="'+an+'"><canvas width="240" height="192" aria-hidden="true"></canvas><b>'+esc(i.n)+'</b><small>'+(an?'Angelegt':i.ev?esc(EVENT[i.ev].n):'')+'</small></button>';}
+  if(fehlt)h+='<button type="button" class="item mehr" id="inv-shop"><span class="mehrbild" aria-hidden="true">+</span><b>Mehr im Shop</b><small>'+fehlt+' weitere</small></button>';
+  $('sinhalt').innerHTML=h+'</div>';muenzAnzeige();invSz=null;
+  $('sinhalt').querySelectorAll('.slot').forEach(b=>{vorschau(b.querySelector('canvas'),st.eq[b.dataset.slot]);b.onclick=()=>{invFach=b.dataset.slot;renderInv();};});
+  $('sinhalt').querySelectorAll('.item[data-id]').forEach(b=>{vorschau(b.querySelector('canvas'),b.dataset.id);b.onclick=()=>{const id=b.dataset.id;if(st.eq[invFach]!==id){anlegen(id);toast(ITEM[id].n+' angelegt.');}renderInv();};});
+  if($('inv-shop'))$('inv-shop').onclick=()=>{shopFach=invFach;zeige('shop');};}
+// Probeflug: Kugel mit Spur an Sonne und Planet vorbei ins Loch, alles im angelegten Look
+function invFrame(){const c=$('invcv');if(!c)return;const w=c.clientWidth,h=c.clientHeight;if(!w||!h)return;const dpr=Math.min(devicePixelRatio||1,2);
+  if(!invSz||invSz.w!==w||invSz.h!==h||invSz.look!==st.eq.o){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);
+    invSz={w,h,look:st.eq.o,bg:buildBg(c.width,c.height,dpr),L:mkLooks({p:[[0,0,20,4],[0,0,14,2],[0,0,6,1,1,26,1,0]]},11)};}
+  mitCtx(c.getContext('2d'),()=>{x.setTransform(1,0,0,1,0,0);x.drawImage(invSz.bg,0,0);const k=Math.min(w/320,h/150);
+    x.setTransform(dpr*k,0,0,dpr*k,dpr*(w-320*k)/2,dpr*(h-150*k)/2);
+    const P=[[84,58,20,4],[196,42,14,2],[196+Math.cos(anim*1.3)*26,42+Math.sin(anim*1.3)*26,6,1]];P.forEach((p,j)=>drawBody(invSz.L[j],p,P,1));
+    (LOECHER[st.eq.l]||lochStandard)(276,104);
+    const dur=2.8,ph=(anim%dur)/dur,A=[26,118],B=[160,150],E=[276,104],pt=f=>{const u=1-f;return[u*u*A[0]+2*u*f*B[0]+f*f*E[0],u*u*A[1]+2*u*f*B[1]+f*f*E[1]];};
+    if(ph<.82){const n=ph/.82,T=[];for(let i=0;i<=36;i++)T.push(pt(n*i/36));(SPUREN[st.eq.s]||SPUREN['s-standard'])(T);const e=T[36];drawBall(st.eq.k,e[0],e[1],1.6);}
+    else drawBall(st.eq.k,E[0],E[1],1.6*Math.max(0,1-(ph-.82)/.12));});}
 
 // ---------- Sammlung ----------
 function fd(d){const[y,m,t]=d.split('-');return t+'.'+m+'.'+y;}
@@ -112,7 +137,7 @@ function renderSammlung(){const evs=EVENTS.filter(e=>st.own['e-'+e.id]).sort((a,
   h+='<h3 class="sub2">Bisher</h3><dl class="werte"><div><dt>Sterne</dt><dd>'+zahl(totalStars())+' <small>von '+zahl(N*3)+'</small></dd></div><div><dt>Bahnen</dt><dd>'+best.length+' <small>von '+N+'</small></dd></div>'+
     '<div><dt>Asse</dt><dd>'+ass+'</dd></div><div><dt>Tagesbahnen</dt><dd>'+tage+'</dd></div><div><dt>Endlos-Rekord</dt><dd>'+st.endl.best+'</dd></div><div><dt>Sachen</dt><dd>'+Object.keys(st.own).filter(id=>ITEM[id]).length+' <small>von '+ITEMS.filter(i=>i.p||i.ev).length+'</small></dd></div></dl>';
   $('sinhalt').innerHTML=h;muenzAnzeige();
-  $('sinhalt').querySelectorAll('.item').forEach(b=>{vorschau(b.querySelector('canvas'),b.dataset.id);b.onclick=()=>{const id=b.dataset.id;if(st.eq[ITEM[id].f]===id){st.eq[ITEM[id].f]=STANDARD[ITEM[id].f];if(ITEM[id].f==='o')anlegen(STANDARD.o);else persist();toast(ITEM[id].n+' abgelegt.');}else{anlegen(id);toast(ITEM[id].n+' angelegt.');}renderSammlung();};});
+  $('sinhalt').querySelectorAll('.item').forEach(b=>{vorschau(b.querySelector('canvas'),b.dataset.id);b.onclick=()=>zeige('inv',ITEM[b.dataset.id].f);});
   $('sinhalt').querySelectorAll('[data-alle]').forEach(b=>b.onclick=()=>{for(const id of EVENT[b.dataset.alle].items)anlegen(id);toast(EVENT[b.dataset.alle].n+' angelegt.');renderSammlung();});}
 
 // ---------- Einstellungen ----------
@@ -194,4 +219,4 @@ async function renderAdmin(){if(!adminT)return zeige('einst');const S=$('sinhalt
   else if(ev.vorbei)hinweis={t:ev.vorbei+' ist vorbei',p:'In der Sammlung kannst du den Look jederzeit wieder anlegen.'};
   size();zeige('home');requestAnimationFrame(frame);
   serverPruefen().then(ok=>{if(ok&&konto)sync();else aktualisieren();});})();
-addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('dialog').hidden){$('dialog').hidden=true;return;}if(ansicht!=='spiel'&&ansicht!=='home'){e.preventDefault();zeige(zurueckZu);}});
+addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('dialog').hidden){$('dialog').hidden=true;return;}if(ansicht!=='spiel'&&ansicht!=='home'){e.preventDefault();$('zur').click();}});
