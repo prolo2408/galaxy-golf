@@ -71,7 +71,7 @@ function homeFrame(){const c=$('hcv'),w=c.clientWidth,h=c.clientHeight;if(!w||!h
   if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)||!hScene||hScene.look!==st.eq.o){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);
     hScene={look:st.eq.o,bg:buildBg(c.width,c.height,dpr),looks:mkLooks({p:[[0,0,26,4],[0,0,17,2],[0,0,7,1,1,30,1,0],[0,0,13,3]]},7)};}
   const g=c.getContext('2d');mitCtx(g,()=>{x.setTransform(1,0,0,1,0,0);x.drawImage(hScene.bg,0,0);x.setTransform(dpr,0,0,dpr,0,0);
-    const cx=w*.5,cy=Math.min(h*.22,150),s=Math.min(1.3,w/360);x.save();x.translate(cx,cy);x.scale(s,s);
+    const hr=document.querySelector('.hallo'),cr=c.getBoundingClientRect(),hb=hr?hr.getBoundingClientRect():null,cx=w*.5,cy=hb?hb.top-cr.top+30+(hb.height-30)/2:Math.min(h*.22,150),s=Math.min(1.3,w/360,hb?(hb.height-30)/110:1);x.save();x.translate(cx,cy);x.scale(s,s);
     const a1=anim*.25,a2=-anim*.16,p1=[Math.cos(a1)*95,Math.sin(a1)*34,17,2],p2=[Math.cos(a2)*150,Math.sin(a2)*52,13,3],m=[p1[0]+Math.cos(anim*1.4)*30,p1[1]+Math.sin(anim*1.4)*30,7,1],P=[[0,0,26,4],p1,m,p2];
     x.strokeStyle='rgba('+C.star+',.08)';x.lineWidth=1;x.beginPath();x.ellipse(0,0,95,34,0,0,7);x.stroke();x.beginPath();x.ellipse(0,0,150,52,0,0,7);x.stroke();
     const order=[3,1,2,0].sort((i,j)=>P[i][1]-P[j][1]);for(const i of order)drawBody(hScene.looks[i],P[i],P,1);

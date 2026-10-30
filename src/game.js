@@ -3,6 +3,9 @@ const N=LV.length;
 const TIERS=['Leicht','Mittel','Schwer','Extrem','Kosmos'];
 const $=id=>document.getElementById(id);
 const cv=$('c');x=cv.getContext('2d');
+// iOS Safari ignoriert user-scalable=no: Zoomen per Geste und Doppeltipp abfangen, sonst verrutscht die Seite seitlich
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const zahl=n=>Number(n).toLocaleString('de-DE');
 const COIN='<i class="coin" aria-hidden="true"></i>';

@@ -54,7 +54,7 @@ const LOOKS={
       sun:['#fff7c2','#ffd23f','#ff8a00'],wh:['#2ef2ff','#ff2ec4'],shade:'rgba(0,0,0,0)',wind:'46,242,255'},pal:PAL_NE,sonne:'neonsun',mond:'neonmoon',stil:'neon',seed:5,bg:'raster'}
 };
 function setzeLook(id){LK=LOOKS[id]||LOOKS['o-klassisch'];C=LK.c;const r=document.documentElement;
-  for(const k in LK.css)r.style.setProperty('--'+k,LK.css[k]);r.style.setProperty('--brand',LK.brand||'var(--display)');
+  for(const k in LK.css)r.style.setProperty('--'+k,LK.css[k]);r.style.setProperty('--feld',LK.c.bg);r.style.setProperty('--brand',LK.brand||'var(--display)');
   r.dataset.look=id.slice(2);const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=LK.css.void;}
 function mitLook(id,fn){const a=LK,b=C;LK=LOOKS[id];C=LK.c;try{fn();}finally{LK=a;C=b;}}
 function mitCtx(c,fn){const a=x;x=c;try{fn();}finally{x=a;}}

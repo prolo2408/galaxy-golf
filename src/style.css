@@ -7,7 +7,8 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
-html,body{height:100%}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+html{background:var(--feld,var(--void))}
 body{margin:0;background:var(--void);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 input,select,textarea{-webkit-user-select:text;user-select:text}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -81,7 +82,7 @@ kbd{font-family:var(--display);font-size:11px;border:1px solid var(--line);borde
 .side .keys{margin:0;font-size:13px;line-height:2;color:var(--dim)}
 
 /* ---------- Startbildschirm ---------- */
-.home{position:fixed;inset:0;z-index:5;background:var(--void);overflow:hidden}
+.home{position:fixed;inset:0;z-index:5;background:var(--feld,var(--void));overflow:hidden}
 #hcv{position:absolute;inset:0;width:100%;height:100%}
 .hinhalt{position:relative;box-sizing:border-box;height:100%;overflow-y:auto;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:12px;
   padding:max(18px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(18px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -89,7 +90,7 @@ kbd{font-family:var(--display);font-size:11px;border:1px solid var(--line);borde
 .hkopf .brand{font-size:30px}
 :root[data-look="halloween"] .hkopf .brand{font-size:36px}
 .mzbig{flex:none;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums;padding:8px 14px;border-radius:999px;background:color-mix(in srgb,var(--panel),transparent 15%)}
-.hallo{margin:0 0 auto;color:var(--dim);font-size:14px;min-height:150px}
+.hallo{margin:0;flex:1 0 auto!important;color:var(--dim);font-size:14px;min-height:190px}
 .hinhalt>button,.hinhalt>div,.hinhalt>section,.hinhalt>nav{flex:none}
 .gross{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--display);font-size:20px;font-weight:600;padding:16px}
 .gross small{font-family:var(--body);font-weight:400;font-size:13px;opacity:.8}
@@ -126,7 +127,7 @@ kbd{font-family:var(--display);font-size:11px;border:1px solid var(--line);borde
 .skopf h2{flex:1;margin:0;font-family:var(--display);font-weight:600;font-size:20px}
 .zur{flex:none;padding:10px 14px}
 .smz{font-family:var(--display);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.sinhalt{overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px;
+.sinhalt{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;box-sizing:border-box;width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px;
   padding:16px max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .tabs4,.tabs2{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .tabs2{grid-template-columns:1fr 1fr}
@@ -229,7 +230,7 @@ input:disabled{opacity:.5}
   .side{display:flex;grid-area:side;flex-direction:column;gap:22px;min-height:0;overflow:hidden}
   .bar{display:grid;grid-template-columns:1fr 1fr}
   .msg{font-size:16px}
-  .hallo{min-height:220px}
+  .hallo{min-height:240px}
 }
 @media (max-height:600px){.side .legend{display:none}}
 @media (hover:none){.side .keys{display:none}}
