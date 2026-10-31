@@ -5,10 +5,15 @@ Weltraum-Minigolf mit echter Schwerkraft (Newton: Masse wächst mit Dichte und R
 - **420 Bahnen in fünf Stufen**: Leicht, Mittel, Schwer, Extrem und **Kosmos** mit Sonnenwind-Feldern und Doppelsternen. Jede Bahn ist geprüft: kein gerader Schuss aufs Loch, der Tipp-Schuss trifft hoch und quer.
 - **Tagesbahn**: jeden Tag eine neue, für alle gleich (Vorrat für ein Jahr).
 - **Endlos**: Bahnen werden im Browser frisch gebaut und mit der Physik geprüft, immer schwerer. Pro Bahn Par + 2 Schläge.
-- **Münzen** für Sterne (4 je Stern), Asse ohne Tipp (15), die Tagesbahn (15 + 5 je Stern) und drei **Tagesaufgaben**. Bisherige Sterne zählen rückwirkend.
-- **Shop** mit Reitern: *Event* (Banner mit Countdown, Event-Sachen gratis abholen), *Angebote* (jeden Tag drei Sachen 25 % günstiger, für alle gleich) und die Fächer Kugel, Spur, Loch, Look. Karten zeigen die Seltenheit (Gewöhnlich, Selten, Episch, Legendär, Event).
-- **Inventar** mit vier Plätzen: Platz antippen, aus den eigenen Sachen wählen, oben fliegt die Ausrüstung zur Probe.
-- **Events**: Wer im Zeitraum im Shop vorbeischaut, holt Abzeichen und Event-Sachen gratis ab und behält sie für immer, etwa *Halloween 2026* (10.10. bis 03.11.). Das Profil in den Einstellungen zeigt, seit wann man dabei ist.
+- **Münzen** für Sterne (4 je Stern), Asse ohne Tipp (15), die Tagesbahn (15 + 5 je Stern), Tagesaufgaben, Wochen-Herausforderungen, Tagesbonus und Sternenpass. Bisherige Sterne zählen rückwirkend.
+- **Tagesaufgaben**: drei am Tag, für alle gleich, jede für jeden machbar. Aufgaben wie „3 Bahnen mit Par 3“ oder „eine Bahn mit Wurmloch“ bringen ihre eigenen, geprüften Bahnen mit (`src/aufgaben.json`), der Spielen-Knopf startet sie.
+- **Wochen-Herausforderungen**: drei pro Woche (ab 2.11.2026), je 100 Münzen und 100 XP.
+- **Tagesbonus**: Münzen fürs Reinschauen, mit Serie wachsend; an Tag 7 eine Truhe mit einer seltenen oder epischen Sache.
+- **Sternenpass**: jeden Monat 30 Stufen, XP aus Bahnen, Aufgaben, Bonus und Woche. Münzen auf jeder Stufe, auf Stufe 30 eine Sache, die es nur in diesem Monat gibt (November 2026: Prismakugel).
+- **Shop** mit Wechsel wie in großen Spielen: jeden Tag vier Sachen (eine 25 % günstiger), jeden Montag zwei Highlights ab 450 Münzen, neue Sachen 14 Tage unter *Neu*. Was fehlt, kommt wieder. Marken für Neu, Zurück und Rabatt, Countdowns. Antippen öffnet die **Großansicht** mit Probeflug, Kaufen zeigt einen **Kauf-Moment** in der Farbe der Seltenheit.
+- **Inventar** mit vier Plätzen: Platz antippen, aus den eigenen Sachen wählen, oben fliegt die Ausrüstung zur Probe. Neu bekommene Sachen tragen eine Marke.
+- **Events**: Event-Sachen stehen im Reiter *Event* für 0 Münzen und werden einzeln abgeholt; mit der ersten kommt das Abzeichen. Sie bleiben für immer, etwa *Halloween 2026* (10.10. bis 03.11.). Das Profil in den Einstellungen zeigt, seit wann man dabei ist.
+- **Rangliste** der Tagesbahn unter Freunden (heute und gestern, braucht ein Konto).
 - **Konten** mit Name und PIN: Spielstand auf dem Server, auf jedes Handy mitnehmbar. **Geschenk-Codes** und ein **Admin-Bereich** nur für dich.
 - Auf dem Handy hochkant, am Rechner quer mit Seitenleiste. Als App installierbar (PWA), spielbar auch offline.
 
@@ -57,14 +62,15 @@ Der Server prüft Passwort und Codes; im Spiel selbst steht nichts davon. Beim V
 |---|---|
 | `src/physics.js` | Flugphysik, gemeinsam für Spiel, Generator und Endlos-Modus |
 | `src/gen.js` | Bahn-Baukasten und Prüfungen (Generator und Endlos-Modus) |
-| `src/stand.js` | Spielstand, Shop-Katalog, Events, Tagesaufgaben, Münzen, Zusammenführen – gemeinsam für Spiel und Server |
+| `src/stand.js` | Spielstand, Shop-Katalog und Shop-Wechsel, Events, Tagesaufgaben, Woche, Tagesbonus, Sternenpass, Münzen, Zusammenführen – gemeinsam für Spiel und Server |
 | `src/look.js` | Looks, Planeten, Kugeln, Spuren, Löcher, Hintergrund |
 | `src/game.js` | Spielfeld, Modi, Eingabe |
-| `src/ui.js` | Startbildschirm, Inventar, Shop, Einstellungen mit Profil, Konto, Admin, Abgleich |
+| `src/ui.js` | Startbildschirm, Shop, Großansicht, Kauf-Moment, Inventar, Sternenpass, Rangliste, Einstellungen mit Profil, Konto, Admin, Abgleich |
 | `src/levels.json` | Kampagne mit Stufe, Par und Lösungsschuss für den Tipp |
 | `src/tages.json` | Vorrat für die Tagesbahn |
-| `server/server.js` | Server (nur Node-Standardbibliothek): liefert `site/` aus, Konten, Abgleich, Codes, Admin |
-| `tools/levelgen.cjs` | erzeugt Bahnen: `node tools/levelgen.cjs kosmos|tages <ausgabe.json>` |
+| `src/aufgaben.json` | Bahnen für Tagesaufgaben: `ass`, `p3`, `wurm`, `wind`, `doppel` |
+| `server/server.js` | Server (nur Node-Standardbibliothek): liefert `site/` aus, Konten, Abgleich, Truhe und Pass prüfen, Rangliste, Codes, Admin |
+| `tools/levelgen.cjs` | erzeugt Bahnen: `node tools/levelgen.cjs kosmos|tages|aufgaben-<art> <ausgabe.json>` |
 | `tools/build.cjs` | baut `site/index.html` und `server/info.json` |
 | `tools/test.cjs` | prüft Münzen, Zusammenführen und den Server |
 
@@ -76,6 +82,6 @@ node tools/build.cjs && node tools/test.cjs
 
 und in `site/sw.js` die Nummer in `CACHE` hochzählen, damit installierte Apps die neue Fassung holen.
 
-### Ein neues Event
+### Neue Inhalte
 
-In `src/stand.js` bei `EVENTS` eintragen (Name, Zeitraum, optional ein Look) und die Event-Sachen in `ITEMS` mit `ev:'<event-id>'` markieren. Für neue Sachen braucht es eine Zeichenfunktion in `src/look.js` (`KUGELN`, `SPUREN`, `LOECHER` oder `LOOKS`).
+Events, neue Skins und der Sternenpass jedes Monats: siehe `CLAUDE.md`. Die wöchentliche geplante Aufgabe hält sich daran.

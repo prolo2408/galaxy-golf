@@ -6,7 +6,7 @@ const BASIS=path.join(__dirname,'..'),SITE=path.join(BASIS,'site'),DATEN=process
 const PORT=+(process.env.PORT||80),TZ='Europe/Berlin';
 const ADMIN=String(process.env.GG_ADMIN_PASSWORT||'').trim();
 const ST=new Function(fs.readFileSync(path.join(BASIS,'src/stand.js'),'utf8')+
-  ';return{ITEM,EVENT,evItems,istBekannt,muenzen,sauber,zusammen,neuerStand,datum,imEvent,angebote};')();
+  ';return{ITEM,EVENT,evItems,istBekannt,muenzen,sauber,zusammen,neuerStand,datum,imEvent,angebotOk,truheOk,passOk,STANDARD};')();
 const N=JSON.parse(fs.readFileSync(path.join(__dirname,'info.json'),'utf8')).n;
 
 // ---------- Daten ----------
@@ -47,13 +47,17 @@ function vomGeraet(x,alt){const s=ST.sauber(x,N),m=morgen();
     else if(o.w==='event'){const e=eventVon(id);if(!e||!ST.imEvent(e,o.d)||o.d>m)delete s.own[id];}
     else if(o.w==='kauf'&&!(ST.ITEM[id]&&ST.ITEM[id].p))delete s.own[id];
     // Angebotspreis nur, wenn es an dem Tag (± ein Tag Zeitzone) wirklich das Angebot war, sonst gilt der volle Preis
-    else if(o.w==='kauf'&&typeof o.p==='number'&&!(o.d>=gestern()&&o.d<=m&&ST.angebote(o.d).some(a=>a.id===id&&a.p===o.p)))delete o.p;}
-  for(const d in s.tag)if(d>m)delete s.tag[d];
-  for(const d in s.auf)if(d>m)delete s.auf[d];
+    else if(o.w==='kauf'&&typeof o.p==='number'&&!(o.d>=gestern()&&o.d<=m&&ST.angebotOk(id,o.d,o.p)))delete o.p;
+    else if((o.w==='serie'||o.w==='pass')&&o.d>m)delete s.own[id];}
+  for(const k of['tag','auf','akt','login'])for(const d in s[k])if(d>m)delete s[k][d];
   s.bonus=alt?alt.bonus|0:0;
   const r=alt?ST.zusammen(alt,s):s;
+  // Truhe und Sternenpass prüfen erst nach dem Zusammenführen: Serie und XP ergeben sich aus dem ganzen Stand
+  for(const id of Object.keys(r.own)){if(alt&&alt.own[id])continue;const o=r.own[id];
+    if(o.w==='serie'&&!ST.truheOk(r,id,o.d)||o.w==='pass'&&!ST.passOk(r,id))delete r.own[id];}
   const neu=Object.keys(r.own).filter(id=>r.own[id].w==='kauf'&&!(alt&&alt.own[id])).sort((a,b)=>r.own[b].d.localeCompare(r.own[a].d));
-  while(ST.muenzen(r)<0&&neu.length){const id=neu.shift();delete r.own[id];for(const f in r.eq)if(r.eq[f]===id)r.eq[f]=ST.neuerStand().eq[f];}
+  while(ST.muenzen(r)<0&&neu.length)delete r.own[neu.shift()];
+  for(const f in r.eq)if(!r.own[r.eq[f]]&&r.eq[f]!==ST.STANDARD[f])r.eq[f]=ST.STANDARD[f];
   return r;}
 function spielerAus(req){const a=String(req.headers.authorization||'');if(!a.startsWith('Bearer '))return null;const id=nachToken.get(hash(a.slice(7)));return id?db.spieler[id]:null;}
 function brauchtSpieler(req){const p=spielerAus(req);if(!p)throw new Fehler(401,'Nicht angemeldet. Bitte neu anmelden.');p.zuletzt=Date.now();return p;}
@@ -94,6 +98,11 @@ const API={
     if(!p||!gleich(pinHash(String(x.pin||''),p.salz),p.pin)){fehlversuch('pin',name.toLowerCase());fehlversuch('pin-ip',ip(req));throw new Fehler(403,'Name oder PIN stimmt nicht.');}
     p.zuletzt=Date.now();const token=neuesToken(p);speichern();return Object.assign({token},antwortStand(p));},
   'POST /api/sync':(req,x)=>{const p=brauchtSpieler(req);p.stand=vomGeraet(x.stand,p.stand);speichern();return antwortStand(p);},
+  // Rangliste der Tagesbahn für heute und gestern: wenigste Schläge zuerst, dann mehr Sterne
+  'GET /api/rangliste':(req)=>{const p=brauchtSpieler(req);
+    return{tage:[heute(),gestern()].map(d=>({tag:d,liste:Object.values(db.spieler).filter(q=>q.stand&&q.stand.tag&&q.stand.tag[d])
+      .map(q=>({name:q.name,s:q.stand.tag[d].s,st:q.stand.tag[d].st,ich:q.id===p.id}))
+      .sort((a,b)=>a.s-b.s||b.st-a.st||a.name.localeCompare(b.name,'de'))}))};},
   'POST /api/abmelden':(req)=>{const a=String(req.headers.authorization||'').slice(7),h=hash(a),id=nachToken.get(h);
     if(id){const p=db.spieler[id];p.tokens=p.tokens.filter(t=>t!==h);nachToken.delete(h);speichern();}return{ok:true};},
   'POST /api/code':(req,x)=>{const w=ip(req);if(gebremst('code',w,10))throw new Fehler(429,'Zu viele falsche Codes. Warte zehn Minuten.');

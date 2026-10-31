@@ -178,6 +178,13 @@ const KUGELN={
     const g=x.createRadialGradient(0,0,0,0,0,r*2);g.addColorStop(0,'rgba(190,225,255,.7)');g.addColorStop(1,'rgba(190,225,255,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,r*2,0,7);x.fill();kugelBasis(r*.85,'#ffffff');},
   'k-gold':r=>{const g=x.createLinearGradient(-r,-r,r,r);g.addColorStop(0,'#fff0b0');g.addColorStop(.5,'#ffcf4d');g.addColorStop(1,'#b8811f');x.fillStyle='rgba(255,207,77,.2)';x.beginPath();x.arc(0,0,r*2,0,7);x.fill();
     x.fillStyle=g;x.beginPath();x.arc(0,0,r,0,7);x.fill();x.fillStyle='rgba(255,255,255,.8)';x.beginPath();x.arc(-r*.35,-r*.35,r*.25,0,7);x.fill();},
+  // Sternenpass November 2026: Kristall mit sechs Facetten in Regenbogenfarben, dreht sich langsam und blitzt
+  'k-prisma':r=>{const R=r*1.08,g=x.createRadialGradient(0,0,r*.4,0,0,r*2.5);g.addColorStop(0,'rgba(210,240,255,.5)');g.addColorStop(1,'rgba(210,240,255,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,r*2.5,0,7);x.fill();
+    x.save();x.rotate(anim*.7);for(let i=0;i<6;i++){const a0=i/6*Math.PI*2,a1=(i+1)/6*Math.PI*2;x.fillStyle='hsl('+((i*60+anim*80)%360)+',92%,'+(i%2?74:63)+'%)';
+      x.beginPath();x.moveTo(0,0);x.lineTo(Math.cos(a0)*R,Math.sin(a0)*R);x.lineTo(Math.cos(a1)*R,Math.sin(a1)*R);x.closePath();x.fill();}
+    x.strokeStyle='rgba(255,255,255,.9)';x.lineWidth=Math.max(.6,r*.13);x.lineJoin='round';x.beginPath();for(let i=0;i<=6;i++){const a=i/6*Math.PI*2;i?x.lineTo(Math.cos(a)*R,Math.sin(a)*R):x.moveTo(Math.cos(a)*R,Math.sin(a)*R);}x.stroke();
+    x.globalAlpha=.6;x.fillStyle='#fff';x.beginPath();x.moveTo(0,-R*.55);x.lineTo(R*.45,-R*.27);x.lineTo(0,0);x.lineTo(-R*.45,-R*.27);x.closePath();x.fill();x.globalAlpha=1;x.restore();
+    const f=(anim*.9)%1;if(f<.25){const k=r*.6*(1-Math.abs(f-.125)/.125);x.strokeStyle='#fff';x.lineWidth=Math.max(.6,r*.11);x.lineCap='round';x.beginPath();x.moveTo(r*.55-k,-r*.6);x.lineTo(r*.55+k,-r*.6);x.moveTo(r*.55,-r*.6-k);x.lineTo(r*.55,-r*.6+k);x.stroke();}},
   'k-kuerbis':r=>{kugelBasis(r,'#ff8a1f');x.fillStyle='#e8670c';x.beginPath();x.ellipse(-r*.45,0,r*.25,r*.95,0,0,7);x.ellipse(r*.45,0,r*.25,r*.95,0,0,7);x.fill();
     x.strokeStyle='#4f7d24';x.lineWidth=Math.max(1.2,r*.3);x.lineCap='round';x.beginPath();x.moveTo(0,-r*.85);x.lineTo(r*.25,-r*1.35);x.stroke();}
 };

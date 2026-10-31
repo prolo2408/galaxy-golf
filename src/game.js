@@ -1,4 +1,4 @@
-// Galaxy Golf – Spielfeld. Erwartet LV (Kampagne), TG (Tagesbahnen) und physics.js, gen.js, stand.js, look.js.
+// Galaxy Golf – Spielfeld. Erwartet LV (Kampagne), TG (Tagesbahnen), AG (Bahnen der Tagesaufgaben) und physics.js, gen.js, stand.js, look.js.
 const N=LV.length;
 const TIERS=['Leicht','Mittel','Schwer','Extrem','Kosmos'];
 const $=id=>document.getElementById(id);
@@ -24,12 +24,17 @@ function persist(){st.t=Date.now();try{localStorage.setItem('gg5',JSON.stringify
 function eventsPruefen(){const d=datum();let vorbei=null;
   if(st.auto&&!EVENTS.some(e=>e.look===st.auto.look&&imEvent(e,d))){if(st.eq.o===st.auto.look){vorbei=ITEM[st.auto.look].n;st.eq.o=st.auto.vorher;}st.auto=null;persist();}
   return{vorbei};}
-const offeneEvents=()=>EVENTS.filter(e=>imEvent(e,datum())&&!st.own['e-'+e.id]);
+// Ein Event ist offen, solange es läuft und noch nicht jede Sache abgeholt ist
+const offeneEvents=()=>EVENTS.filter(e=>imEvent(e,datum())&&e.items.some(id=>!st.own[id]));
+// Sternenpass des laufenden Monats
+function passJetzt(){const mon=datum().slice(0,7),xp=mon>=PASS.ab?xpMonat(st,mon):0;return{mon,xp,stufe:passStufe(xp)};}
+// Stufe 30 erreicht: die Pass-Sache des Monats kommt ins Inventar (der Server prüft das nach)
+function passPruefen(){const p=passJetzt(),P=PAESSE[p.mon];if(P&&p.stufe>=PASS.stufen&&!st.own[P.item]){st.own[P.item]={w:'pass',d:datum()};persist();return P.item;}return null;}
 SEEN.push(...EVENTS.map(e=>'ev-'+e.id));
 
 // ---------- Größe und Ausrichtung ----------
 let S=1,DPR=1,orient='p',bg=null,sterneBlink=[];
-let modus='kampagne',bahn=null,li=0,lvl=null,looks=[],tagKey=null,lauf=null;
+let modus='kampagne',bahn=null,li=0,lvl=null,looks=[],tagKey=null,lauf=null,aufg=null;
 function inst(b){if(orient==='l')return genRot(b);const l={W:360,H:560,b:b.b.slice(),h:b.h.slice(),par:b.par,t:b.t,s:b.s.slice(),p:b.p.map(q=>q.slice())};
   if(b.w)l.w=b.w.map(q=>q.slice());if(b.f)l.f=b.f.map(q=>q.slice());return l;}
 function size(){const f=$('field'),fw=f.clientWidth,fh=f.clientHeight;if(!fw||!fh)return;
@@ -44,19 +49,19 @@ let zust='aim',ball=null,shots=0,drag=null,hint=null,tipp=false,trail=[],t=0,acc
 function home(){ball={x:lvl.b[0],y:lvl.b[1],vx:0,vy:0,cd:0};trail=[];t=0;frames=0;}
 // Dieselbe Bahn noch einmal laden, ohne sie geschafft zu haben, setzt die Schläge nicht zurück – sonst wären Sterne geschenkt.
 function setBahn(b,seed){const offen=b===bahn&&zust!=='won'&&zust!=='sink';bahn=b;lvl=inst(b);looks=mkLooks(b,seed);if(!offen){shots=0;tipp=false;}hint=null;drag=null;zust='aim';home();$('ov').hidden=true;ui();intro();}
-function load(i){lauf=null;if(modus!=='kampagne')bahn=null;modus='kampagne';li=Math.max(0,Math.min(N-1,i));st.cur=li;persist();setBahn(LV[li],li);}
+function load(i){lauf=null;aufg=null;if(modus!=='kampagne')bahn=null;modus='kampagne';li=Math.max(0,Math.min(N-1,i));st.cur=li;persist();setBahn(LV[li],li);}
 // Tagesbahn: eine pro Tag aus dem Vorrat, für alle gleich
 const TAG0=Date.UTC(2026,9,30);
 function tagIndex(d){const[y,m,dd]=d.split('-').map(Number);return Math.round((Date.UTC(y,m-1,dd)-TAG0)/864e5);}
 function tagesBahn(d){const n=TG.length;return TG[((tagIndex(d)%n)+n)%n];}
-function startTages(){lauf=null;if(modus!=='tages')bahn=null;modus='tages';tagKey=datum();setBahn(tagesBahn(tagKey),100000+tagIndex(tagKey));}
+function startTages(){lauf=null;aufg=null;if(modus!=='tages')bahn=null;modus='tages';tagKey=datum();setBahn(tagesBahn(tagKey),100000+tagIndex(tagKey));}
 // Endlos: Bahnen werden im Hintergrund gebaut und mit der Physik geprüft, eine im Voraus
 function endlosOpt(k){const d=Math.min(.95,.12+k*.06);return[d,{sa:6,sp:.45,ds:.2,minHits:Math.round(3+10*(1-d)),parQ:[13,7,4],wind:k>=4?.3:0,bin:k>=6?.25:0,tier:d<.35?0:d<.6?1:d<.8?2:3}];}
 // Die erste Endlos-Bahn wird schon gebaut, während der Startbildschirm offen ist
 let vorrat=null;
 function vorratBauen(){if(vorrat||lauf)return;const seed=(Math.random()*4294967296)>>>0,rnd=rng(seed),[d,o]=endlosOpt(0),v=vorrat={seed,rnd,g:genLevel(d,rnd,o),bahn:null};
   (function schritt(){if(vorrat!==v)return;const t0=performance.now();let r;do{r=v.g.next();}while(!r.done&&performance.now()-t0<8);if(r.done)v.bahn=r.value;else setTimeout(schritt,16);})();}
-function startEndlos(){bahn=null;const v=vorrat;vorrat=null;const seed=v?v.seed:(Math.random()*4294967296)>>>0;
+function startEndlos(){bahn=null;aufg=null;const v=vorrat;vorrat=null;const seed=v?v.seed:(Math.random()*4294967296)>>>0;
   lauf={n:0,k:v&&v.bahn?1:0,seed,rnd:v?v.rnd:rng(seed),naechste:v&&v.bahn||null,arbeit:v&&!v.bahn?v.g:null,warten:false};modus='endlos';
   if(lauf.arbeit){const l=lauf;setTimeout(()=>arbeite(l),0);}else endlosBauen();endlosWeiter();}
 function endlosBauen(){if(!lauf||lauf.naechste||lauf.arbeit)return;const[d,o]=endlosOpt(lauf.k);lauf.arbeit=genLevel(d,lauf.rnd,o);const l=lauf;setTimeout(()=>arbeite(l),0);}
@@ -64,11 +69,16 @@ function arbeite(l){if(l!==lauf||!l.arbeit)return;const t0=performance.now();let
   if(!r.done){setTimeout(()=>arbeite(l),0);return;}l.naechste=r.value;l.arbeit=null;l.k++;if(l.warten){l.warten=false;endlosWeiter();}}
 function endlosWeiter(){if(!lauf)return;if(!lauf.naechste){lauf.warten=true;$('card').innerHTML='<h2>Bahn wird gebaut</h2><p>Die Physik prüft gerade, ob sie lösbar ist.</p><div class="laden" aria-hidden="true"></div>';$('ov').hidden=false;return;}
   const b=lauf.naechste;lauf.naechste=null;setBahn(b,lauf.seed%99991+lauf.n);endlosBauen();}
+// Aufgaben-Bahnen: die Bahnen, die eine Tagesaufgabe heute mitbringt, nacheinander
+function startAufgabe(id,i){const d=datum(),A=AUFG[id],pool=AG[A.b]||[],idx=aufgabenBahnen(id,d,pool.length);if(!idx.length)return false;
+  lauf=null;if(modus!=='aufgabe'||!aufg||aufg.id!==id||aufg.d!==d)bahn=null;modus='aufgabe';aufg={id,d,idx,i:Math.max(0,Math.min(idx.length-1,i|0))};
+  setBahn(pool[idx[aufg.i]],300000+dnum(d)%9973*10+aufg.i);return true;}
 const limit=()=>lvl.par+2;
 function totalStars(){return Object.values(st.best).reduce((a,b)=>a+b.st,0);}
 function ui(){const tr=$('tier');
   if(modus==='kampagne'){tr.textContent=TIERS[lvl.t];tr.className='tier t'+lvl.t;$('lvn').textContent='Bahn '+(li+1)+'/'+N;}
   else if(modus==='tages'){tr.textContent='Tagesbahn';tr.className='tier tt';const[,m,d]=tagKey.split('-');$('lvn').textContent=d+'.'+m+'. · '+TIERS[lvl.t];}
+  else if(modus==='aufgabe'){tr.textContent='Aufgabe';tr.className='tier ta';$('lvn').textContent='Bahn '+(aufg.i+1)+' von '+aufg.idx.length;}
   else{tr.textContent='Endlos';tr.className='tier te';$('lvn').textContent=(lauf?'Bahn '+(lauf.n+1)+' · ':'')+'Rekord '+st.endl.best;}
   $('par').textContent=lvl.par;$('sh').textContent=modus==='endlos'?shots+'/'+limit():shots;$('mz').textContent=zahl(muenzen(st));
   $('tip').classList.toggle('on',!!hint);$('tip').setAttribute('aria-disabled',modus==='endlos');
@@ -83,7 +93,8 @@ const INTRO={start:['So geht’s','Irgendwo aufs Feld tippen, zurückziehen und 
   wind:['Neu: Sonnenwind','In den schimmernden Feldern weht Sonnenwind. Er schiebt die Kugel gleichmäßig in Pfeilrichtung, solange sie darin fliegt.'],
   bin:['Neu: Doppelsterne','Zwei Sonnen kreisen umeinander, so schnell, wie ihre Schwerkraft es vorgibt. Bei jedem Schuss starten sie an derselben Stelle.'],
   tages:['Tagesbahn','Jeden Tag eine neue Bahn, für alle gleich. Beim ersten Schaffen gibt es Bonus-Münzen, mehr Sterne bringen mehr.'],
-  endlos:['Endlos','Bahn um Bahn, immer schwerer, frisch gebaut. Pro Bahn hast du Par + 2 Schläge, sonst ist der Lauf vorbei. Einen Tipp gibt es hier nicht.']};
+  endlos:['Endlos','Bahn um Bahn, immer schwerer, frisch gebaut. Pro Bahn hast du Par + 2 Schläge, sonst ist der Lauf vorbei. Einen Tipp gibt es hier nicht.'],
+  aufgabe:['Aufgaben-Bahnen','Diese Bahnen passen genau zur Tagesaufgabe und sind heute für alle gleich. Jede geschaffte Bahn zählt, auch nochmal gespielt.']};
 let introT;function intro(){const l=lvl,sn=st.seen,k=modus!=='kampagne'&&!sn[modus]?modus:!sn.start?'start':l.p.some(q=>q[3]===4&&!isBin(q))&&!sn.sun?'sun':l.p.some(isBin)&&!sn.bin?'bin':l.p.some(isMoon)&&!sn.moon?'moon':l.w&&!sn.warp?'warp':l.f&&!sn.wind?'wind':null;
   const el=$('intro');if(!k){el.hidden=true;return;}sn[k]=1;persist();const tx=v=>typeof v==='function'?v():v;$('inh').textContent=tx(INTRO[k][0]);$('inp').textContent=tx(INTRO[k][1]);el.hidden=false;clearTimeout(introT);introT=setTimeout(()=>el.hidden=true,10000);}
 $('intro').onclick=()=>$('intro').hidden=true;
@@ -116,25 +127,38 @@ function fail(m,cols){burst(ball.x,ball.y,30,cols,2.2);zust='aim';home();say(m,'
 function sterne(){return shots<=lvl.par-1?3:shots<=lvl.par?2:1;}
 function aufgabe(id,wert,hoechst){const d=datum();if(!aufgabenFuer(d).includes(id))return;const a=st.auf[d]||(st.auf[d]={}),z=AUFG[id].z,alt=a[id]|0;
   const neu=Math.min(z,hoechst?Math.max(alt,wert):alt+wert);if(neu===alt)return;a[id]=neu;if(alt<z&&neu>=z)fertig.push(AUFG[id]);}
+let xpPlus=0,passNeu=null,passSache=null,wocheNeu=[];
 function win(){zust='sink';sinkT=0;ball.x=lvl.h[0];ball.y=lvl.h[1];burst(lvl.h[0],lvl.h[1],40,[C.ring,C.disk,'#ffffff'],2);
-  const n=sterne(),vorher=muenzen(st),ass=shots===1&&!tipp;fertig=[];
+  const n=sterne(),vorher=muenzen(st),ass=shots===1&&!tipp,d=datum(),w=wocheVon(d),pv=passJetzt(),wv=wochenErledigt(st,w);fertig=[];
   if(modus==='kampagne'){const k=li+1,prev=st.best[k];st.best[k]={s:Math.min(shots,prev?prev.s:99),st:Math.max(n,prev?prev.st:0)};if(ass||(prev&&prev.a))st.best[k].a=1;st.un=Math.max(st.un,Math.min(N,k+3));}
   else if(modus==='tages'){const prev=st.tag[tagKey];st.tag[tagKey]={s:Math.min(shots,prev?prev.s:99),st:Math.max(n,prev?prev.st:0)};aufgabe('tages',1);}
-  else{lauf.n++;st.endl.best=Math.max(st.endl.best,lauf.n);aufgabe('endlos',lauf.n,true);}
-  aufgabe('spielen',1);if(shots<lvl.par)aufgabe('unterpar',1);if(ass)aufgabe('ass',1);if(lvl.par>=3)aufgabe('knifflig',1);if(!tipp)aufgabe('ohnetipp',1);aufgabe('sterne',n);if(lvl.w)aufgabe('wurm',1);
+  else if(modus==='endlos'){lauf.n++;st.endl.best=Math.max(st.endl.best,lauf.n);aufgabe('en3',lauf.n,true);}
+  aufgabe('b5',1);aufgabe('st8',n);if(!tipp)aufgabe('ot3',1);if(lvl.par>=3)aufgabe('p3',1);if(shots<lvl.par)aufgabe('up2',1);if(ass)aufgabe('as1',1);
+  if(lvl.w)aufgabe('wu',1);if(lvl.f)aufgabe('wi',1);if(lvl.p.some(isBin))aufgabe('dp',1);
+  // Tagesleistung: zählt für Sternenpass und Wochen-Herausforderungen
+  const a=st.akt[d]||(st.akt[d]={b:0,s:0,a:0,e:0});a.b++;a.s+=n;if(ass)a.a++;if(modus==='endlos')a.e=Math.max(a.e,lauf.n);
+  const pn=passJetzt();xpPlus=pn.xp-pv.xp;passNeu=pn.stufe>pv.stufe&&pn.mon>=PASS.ab?pn.stufe:null;
+  wocheNeu=wochenErledigt(st,w).filter(id=>!wv.includes(id)).map(id=>WAUFG[id]);
+  passSache=passPruefen();
   gewinn=muenzen(st)-vorher;persist();if(st.opt.vib&&navigator.vibrate)try{navigator.vibrate(25);}catch(e){}ui();}
 function showWin(){const n=sterne(),h=istHW();
   const title=shots===1?'Hole in one!':n===3?(h?'Gruselig gut!':'Unter Par!'):n===2?(h?'Süßes!':'Par geschafft'):'Eingelocht';
   let p=shots+(shots===1?' Schlag':' Schläge')+' bei Par '+lvl.par+'.'+(shots===1&&tipp&&modus==='kampagne'?' Mit Tipp gibt es keinen Ass-Bonus.':''),knoepfe;
   if(modus==='kampagne'){const last=li===N-1,nt=!last&&LV[li+1].t>lvl.t?' Als Nächstes beginnt Stufe '+TIERS[LV[li+1].t]+'.':'';p+=last?' Das war die letzte Bahn.':nt;
     knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">'+(last?'Alle Bahnen':'Weiter')+'</button>';}
-  else if(modus==='tages')knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">Zum Start</button>';
+  else if(modus==='tages')knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">Zum Start</button>'+(konto?'<button type="button" class="breit" id="rangl">Rangliste ansehen</button>':'');
+  else if(modus==='aufgabe'){const last=aufg.i>=aufg.idx.length-1;knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">'+(last?'Zum Start':'Nächste Bahn')+'</button>';}
   else{p='Bahn '+lauf.n+' geschafft'+(lauf.n>=st.endl.best&&lauf.n>1?', neuer Rekord!':'.');knoepfe='<button type="button" class="go" id="nx">Nächste Bahn</button>';}
-  const extra=(gewinn>0?'<p class="plus">+'+zahl(gewinn)+' '+COIN+'</p>':'')+fertig.map(a=>'<p class="erledigt">Aufgabe geschafft: '+esc(a.t)+'</p>').join('');
-  $('card').innerHTML='<div class="stars">'+'★'.repeat(n)+'<i>'+'★'.repeat(3-n)+'</i></div><h2 class="big">'+title+'</h2><p>'+p+'</p>'+extra+'<div class="row">'+knoepfe+'</div>';
-  if($('again'))$('again').onclick=()=>modus==='tages'?setBahn(bahn,100000+tagIndex(tagKey)):load(li);
+  const extra='<div class="gewinne">'+(gewinn>0?'<span class="plus">+'+zahl(gewinn)+' '+COIN+'</span>':'')+(xpPlus>0?'<span class="xp">+'+xpPlus+' XP</span>':'')+'</div>'+
+    (passNeu?'<p class="passneu">Sternenpass Stufe '+passNeu+(passNeu>=PASS.stufen?' – geschafft!':'')+'</p>':'')+
+    fertig.map(a=>'<p class="erledigt">Aufgabe geschafft: '+esc(a.t)+'</p>').join('')+wocheNeu.map(a=>'<p class="erledigt">Wochen-Herausforderung geschafft: '+esc(a.t)+'</p>').join('');
+  $('card').innerHTML='<div class="stars">'+'★'.repeat(n)+'<i>'+'★'.repeat(3-n)+'</i></div><h2 class="big">'+title+'</h2><p>'+p+'</p>'+extra+'<div class="row wrap">'+knoepfe+'</div>';
+  if($('again'))$('again').onclick=()=>modus==='tages'?setBahn(bahn,100000+tagIndex(tagKey)):modus==='aufgabe'?startAufgabe(aufg.id,aufg.i):load(li);
+  if($('rangl'))$('rangl').onclick=()=>zeige('rang');
+  if(passSache){const id=passSache;passSache=null;setTimeout(()=>moment({id,titel:'Sternenpass geschafft!',text:'Alle 30 Stufen. Diese Belohnung gibt es nur in diesem Monat.'}),500);}
   $('nx').onclick=weiter;$('ov').hidden=false;$('nx').focus({preventScroll:true});}
-function weiter(){if(modus==='kampagne')li===N-1?showMenu():load(li+1);else if(modus==='tages')zeige('home');else endlosWeiter();}
+function weiter(){if(modus==='kampagne')li===N-1?showMenu():load(li+1);else if(modus==='tages')zeige('home');
+  else if(modus==='aufgabe'){if(aufg.i>=aufg.idx.length-1)zeige('home');else startAufgabe(aufg.id,aufg.i+1);}else endlosWeiter();}
 function laufEnde(){const n=lauf.n,rek=n>=st.endl.best&&n>0;lauf=null;
   $('card').innerHTML='<h2 class="big">Lauf vorbei</h2><p>'+(n===1?'Eine Bahn':n+' Bahnen')+' geschafft.'+(rek?' Neuer Rekord!':' Rekord: '+st.endl.best+'.')+'</p><div class="row"><button type="button" id="again">Zum Start</button><button type="button" class="go" id="nx">Neuer Lauf</button></div>';
   $('again').onclick=()=>zeige('home');$('nx').onclick=()=>{bahn=null;startEndlos();};$('ov').hidden=false;$('nx').focus({preventScroll:true});}
@@ -201,4 +225,7 @@ function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;anim+=dt;
   else if(homeSichtbar())homeFrame(dt);
   else if(ansicht==='inv')invFrame();
   else if(ansicht==='shop')shopFrame(dt);
+  else if(ansicht==='pass')passFrame();
+  if(!$('gross').hidden)grossFrame();
+  if(!$('moment').hidden)momentFrame(dt);
   requestAnimationFrame(frame);}

@@ -3,6 +3,7 @@
 // Aufruf:
 //   node tools/levelgen.cjs kosmos <ausgabe.json>   Stufe Kosmos: Sonnenwind, dann Doppelsterne, dann beides
 //   node tools/levelgen.cjs tages  <ausgabe.json>   Vorrat für die Tagesbahn (eine pro Tag)
+//   node tools/levelgen.cjs aufgaben-<art> <ausgabe.json>   Bahnen für Tagesaufgaben (art: ass, p3, wurm, wind, doppel)
 // Die 320 Bahnen der Stufen Leicht bis Extrem stammen aus der Fassung dieses Skripts vor dem Kosmos-Update (git log).
 const fs=require("fs"),path=require("path");
 const src=f=>fs.readFileSync(path.join(__dirname,"../src",f),"utf8");
@@ -29,7 +30,21 @@ if(mode==="kosmos"){
 }else if(mode==="tages"){
   res=sammeln(366,.25,.85,{wind:.15,bin:.1,minHits:4,maxHits:120},"tages");
   for(const l of res)l.t=l.n>=37?0:l.n>=22?1:l.n>=12?2:3;
-}else{console.error("Aufruf: node tools/levelgen.cjs kosmos|tages <ausgabe.json>");process.exit(2);}
+}else if(mode.startsWith("aufgaben-")){
+  // Vorrat für die Bahnen der Tagesaufgaben (src/aufgaben.json), je Art ein eigener Lauf:
+  //   ass: leichte Par-2-Bahnen mit vielen Treffern, damit ein Ass machbar ist
+  //   p3: Par 3 und 4, mittel, damit „unter Par“ machbar ist
+  //   wurm, wind, doppel: mittelschwere Bahnen, die genau das Element enthalten
+  const art=mode.slice(9),A={
+    ass:[+(process.env.ANZAHL||70),.05,.35,{minHits:42,must:l=>!l.w}],
+    p3:[80,.3,.65,{wind:.1,bin:.1,minHits:16,maxHits:36}],
+    wurm:[50,.25,.6,{minHits:12,maxHits:90,must:l=>!!l.w}],
+    wind:[50,.3,.6,{wind:1,minHits:12,maxHits:90,must:l=>!!l.f}],
+    doppel:[50,.3,.6,{bin:1,minHits:12,maxHits:90,must:l=>l.p.some(isBin)}]}[art];
+  if(!A){console.error("Arten: ass, p3, wurm, wind, doppel");process.exit(2);}
+  res=sammeln(A[0],A[1],A[2],A[3],art);
+  for(const l of res)l.t=l.n>=37?0:l.n>=22?1:l.n>=12?2:3;
+}else{console.error("Aufruf: node tools/levelgen.cjs kosmos|tages|aufgaben-<art> <ausgabe.json>");process.exit(2);}
 fs.writeFileSync(out,JSON.stringify(res.map(ohneN)));
 const par={};res.forEach(l=>par[l.par]=(par[l.par]||0)+1);
 log("fertig",res.length,"Bahnen, Par",JSON.stringify(par),"Wind",res.filter(l=>l.f).length,"Doppelsterne",res.filter(l=>l.p.some(isBin)).length);
