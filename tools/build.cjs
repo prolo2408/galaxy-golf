@@ -3,7 +3,7 @@
 const fs=require("fs"),path=require("path"),R=f=>fs.readFileSync(path.join(__dirname,"..",f),"utf8");
 const levels=JSON.parse(R("src/levels.json")),tages=JSON.parse(R("src/tages.json")),aufg=JSON.parse(R("src/aufgaben.json"));
 const fonts='<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Creepster&family=Rubik:wght@400;500&display=swap">';
-const script="const LV="+JSON.stringify(levels)+";\nconst TG="+JSON.stringify(tages)+";\nconst AG="+JSON.stringify(aufg)+";\n"+["physics.js","gen.js","stand.js","look.js","game.js","ui.js"].map(f=>"// ===== "+f+"\n"+R("src/"+f)).join("\n");
+const script="const LV="+JSON.stringify(levels)+";\nconst TG="+JSON.stringify(tages)+";\nconst AG="+JSON.stringify(aufg)+";\n"+["physics.js","gen.js","stand.js","look.js","ton.js","game.js","ui.js"].map(f=>"// ===== "+f+"\n"+R("src/"+f)).join("\n");
 const core="<style>\n"+R("src/style.css")+"</style>\n"+R("src/body.html")+"<script>\n"+script;
 const pwa=`<!doctype html>
 <html lang="de">

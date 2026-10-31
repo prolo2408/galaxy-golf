@@ -6,7 +6,7 @@ const BASIS=path.join(__dirname,'..'),SITE=path.join(BASIS,'site'),DATEN=process
 const PORT=+(process.env.PORT||80),TZ='Europe/Berlin';
 const ADMIN=String(process.env.GG_ADMIN_PASSWORT||'').trim();
 const ST=new Function(fs.readFileSync(path.join(BASIS,'src/stand.js'),'utf8')+
-  ';return{ITEM,EVENT,evItems,istBekannt,muenzen,sauber,zusammen,neuerStand,datum,imEvent,angebotOk,truheOk,passOk,STANDARD};')();
+  ';return{ITEM,EVENT,evItems,istBekannt,muenzen,sauber,zusammen,neuerStand,datum,imEvent,angebotOk,truheOk,passOk,STANDARD,boxEinbuchen,staubStand,tauschbar};')();
 const N=JSON.parse(fs.readFileSync(path.join(__dirname,'info.json'),'utf8')).n;
 
 // ---------- Daten ----------
@@ -48,15 +48,23 @@ function vomGeraet(x,alt){const s=ST.sauber(x,N),m=morgen();
     else if(o.w==='kauf'&&!(ST.ITEM[id]&&ST.ITEM[id].p))delete s.own[id];
     // Angebotspreis nur, wenn es an dem Tag (± ein Tag Zeitzone) wirklich das Angebot war, sonst gilt der volle Preis
     else if(o.w==='kauf'&&typeof o.p==='number'&&!(o.d>=gestern()&&o.d<=m&&ST.angebotOk(id,o.d,o.p)))delete o.p;
-    else if((o.w==='serie'||o.w==='pass')&&o.d>m)delete s.own[id];}
+    else if((o.w==='serie'||o.w==='pass')&&o.d>m)delete s.own[id];
+    else if(o.w==='staub'&&(o.d>m||!ST.tauschbar(id,o.d)))delete s.own[id];}
   for(const k of['tag','auf','akt','login'])for(const d in s[k])if(d>m)delete s[k][d];
+  s.box.z=s.box.z.filter(g=>g.d<=m&&g.t<=Date.now()+864e5);
   s.bonus=alt?alt.bonus|0:0;
   const r=alt?ST.zusammen(alt,s):s;
   // Truhe und Sternenpass prüfen erst nach dem Zusammenführen: Serie und XP ergeben sich aus dem ganzen Stand
   for(const id of Object.keys(r.own)){if(alt&&alt.own[id])continue;const o=r.own[id];
     if(o.w==='serie'&&!ST.truheOk(r,id,o.d)||o.w==='pass'&&!ST.passOk(r,id))delete r.own[id];}
+  // Münzen müssen reichen: sonst fallen die neuesten neuen Box-Ziehungen weg, dann die neuesten neuen Käufe
+  ST.boxEinbuchen(r);const alteZ=new Set((alt&&alt.box&&alt.box.z||[]).map(g=>g.u)),neuZ=r.box.z.filter(g=>!alteZ.has(g.u)).sort((a,b)=>b.t-a.t);
+  while(ST.muenzen(r)<0&&neuZ.length){const u=neuZ.shift().u;r.box.z=r.box.z.filter(g=>g.u!==u);ST.boxEinbuchen(r);}
   const neu=Object.keys(r.own).filter(id=>r.own[id].w==='kauf'&&!(alt&&alt.own[id])).sort((a,b)=>r.own[b].d.localeCompare(r.own[a].d));
   while(ST.muenzen(r)<0&&neu.length)delete r.own[neu.shift()];
+  // Sternenstaub muss reichen: sonst fallen die neuesten neuen Tausche weg
+  const neuS=Object.keys(r.own).filter(id=>r.own[id].w==='staub'&&!(alt&&alt.own[id])).sort((a,b)=>r.own[b].d.localeCompare(r.own[a].d));
+  while(ST.staubStand(r)<0&&neuS.length)delete r.own[neuS.shift()];
   for(const f in r.eq)if(!r.own[r.eq[f]]&&r.eq[f]!==ST.STANDARD[f])r.eq[f]=ST.STANDARD[f];
   return r;}
 function spielerAus(req){const a=String(req.headers.authorization||'');if(!a.startsWith('Bearer '))return null;const id=nachToken.get(hash(a.slice(7)));return id?db.spieler[id]:null;}
@@ -101,7 +109,7 @@ const API={
   // Rangliste der Tagesbahn für heute und gestern: wenigste Schläge zuerst, dann mehr Sterne
   'GET /api/rangliste':(req)=>{const p=brauchtSpieler(req);
     return{tage:[heute(),gestern()].map(d=>({tag:d,liste:Object.values(db.spieler).filter(q=>q.stand&&q.stand.tag&&q.stand.tag[d])
-      .map(q=>({name:q.name,s:q.stand.tag[d].s,st:q.stand.tag[d].st,ich:q.id===p.id}))
+      .map(q=>({name:q.name,s:q.stand.tag[d].s,st:q.stand.tag[d].st,ich:q.id===p.id,titel:q.stand.eq&&q.stand.eq.t!==ST.STANDARD.t&&q.stand.own[q.stand.eq.t]?q.stand.eq.t:undefined}))
       .sort((a,b)=>a.s-b.s||b.st-a.st||a.name.localeCompare(b.name,'de'))}))};},
   'POST /api/abmelden':(req)=>{const a=String(req.headers.authorization||'').slice(7),h=hash(a),id=nachToken.get(h);
     if(id){const p=db.spieler[id];p.tokens=p.tokens.filter(t=>t!==h);nachToken.delete(h);speichern();}return{ok:true};},

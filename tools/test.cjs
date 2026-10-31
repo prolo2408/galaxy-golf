@@ -3,12 +3,16 @@
 const fs=require("fs"),path=require("path"),os=require("os"),{spawn}=require("child_process"),assert=require("assert");
 const W=path.join(__dirname,"..");
 const NAMEN="ITEM,ITEMS,EVENT,AUFG,AUFG_AB,aufgabenFuer,aufgabenGezaehlt,aufgabenBahnen,muenzen,sauber,zusammen,neuerStand,ausAlt,evItems,angeboteAlt,angebotOk,shopFuer,kaufPreis,imShop,zurueckNach,wiederAm,"+
-  "WAUFG,WOCHE_AB,wochenAufgaben,wochenStand,wochenErledigt,serieLaenge,truheOk,truheMoeglich,PASS,PAESSE,xpTag,xpMonat,passStufe,passOk,plusTage,wocheVon,dnum,serieMuenzen,wochenMuenzen,passMuenzen";
+  "WAUFG,WOCHE_AB,wochenAufgaben,wochenStand,wochenErledigt,serieLaenge,truheOk,truheMoeglich,PASS,PAESSE,xpTag,xpMonat,passStufe,passOk,plusTage,wocheVon,dnum,serieMuenzen,wochenMuenzen,passMuenzen,"+
+  "STANDARD,ECO_AB,passBelohnung,passSachen,BOX,banner,boxZuege,boxPity,boxKosten,staubStand,tauschbar,selVon";
 const laden=(code,extra)=>new Function(code+(extra||"")+";return{"+NAMEN+"};")();
 const ST=laden(fs.readFileSync(path.join(W,"src/stand.js"),"utf8"));
 const AG=JSON.parse(fs.readFileSync(path.join(W,"src/aufgaben.json"),"utf8"));
 // Fassung vor dem Shop-Wechsel (Commit 283c1c9), um Rückwärtskompatibilität nachzurechnen
-let ALT=null;try{ALT=new Function(require("child_process").execSync("git show 283c1c9:src/stand.js",{cwd:W,encoding:"utf8",stdio:["ignore","pipe","ignore"]})+";return{aufgabenFuer,muenzen,neuerStand};")();}catch(e){}
+const git=c=>require("child_process").execSync("git show "+c+":src/stand.js",{cwd:W,encoding:"utf8",stdio:["ignore","pipe","ignore"]});
+let ALT=null;try{ALT=new Function(git("283c1c9")+";return{aufgabenFuer,muenzen,neuerStand};")();}catch(e){}
+// Fassung vor Glücksbox und weniger Münzen (Commit 236f1ed)
+let VOR=null;try{VOR=new Function(git("236f1ed")+";return{aufgabenFuer,muenzen,neuerStand,shopFuer,wochenAufgaben,sauber,passMuenzen};")();}catch(e){}
 const tage=(von,n)=>Array.from({length:n},(_,k)=>ST.plusTage(von,k));
 let n=0;const ok=(name,fn)=>Promise.resolve().then(fn).then(()=>{n++;console.log("ok  ",name);},e=>{console.error("FEHLER",name,"\n",e);process.exitCode=1;});
 
@@ -57,35 +61,106 @@ async function logik(){
   await ok("Angebote alter Geräte: Rabatt vom 30.10. wird weiter anerkannt",()=>{const a=ST.angeboteAlt("2026-10-30")[0];assert.ok(ST.angebotOk(a.id,"2026-10-30",a.p));
     const s=ST.neuerStand();s.bonus=1000;s.own={"k-gold":{w:"kauf",d:"2026-10-30",p:450}};assert.strictEqual(ST.muenzen(s),550);
     assert.strictEqual(ST.sauber(s,420).own["k-gold"].p,450);s.own["k-gold"].p=600;assert.strictEqual(ST.sauber(s,420).own["k-gold"].p,undefined);});
-  await ok("Tagesbonus: 10 bis 40 Münzen, Tag 7 Truhe mit Sache oder 150 Münzen, Lücke fängt neu an",()=>{const s=ST.neuerStand();
-    tage("2026-11-01",7).forEach(d=>s.login[d]=1);assert.strictEqual(ST.serieMuenzen(s),10+15+20+25+30+40+150);
-    assert.ok(ST.truheOk(s,"k-komet","2026-11-07"));assert.ok(!ST.truheOk(s,"k-komet","2026-11-06"),"Tag 6 ist keine Truhe");
-    assert.ok(!ST.truheOk(s,"o-neon","2026-11-07"),"Legendär nicht");assert.ok(!ST.truheOk(s,"k-prisma","2026-11-07"),"Pass-Sache nicht");
-    s.own["k-komet"]={w:"serie",d:"2026-11-07"};assert.strictEqual(ST.serieMuenzen(s),140);
-    assert.ok(!ST.truheOk(s,"s-feuer","2026-11-07"),"nur eine Sache pro Truhe");
-    const t=ST.neuerStand();["2026-11-01","2026-11-02","2026-11-04","2026-11-05"].forEach(d=>t.login[d]=1);assert.strictEqual(ST.serieLaenge(t,"2026-11-05"),2);
-    assert.strictEqual(ST.serieMuenzen(t),10+15+10+15);
-    const g=ST.neuerStand();tage("2026-11-01",15).forEach(d=>g.login[d]=1);assert.strictEqual(ST.serieMuenzen(g),2*(140+150)+10,"nach Tag 7 geht es mit Tag 1 weiter");});
-  await ok("Wochen-Herausforderungen: drei pro Woche ab 2.11., Fortschritt aus der ganzen Woche, 100 Münzen je Stück",()=>{
+  await ok("Tagesbonus: bis 1.11. 10 bis 40 Münzen und Truhe oder 150, ab 2.11. 5 bis 20 und Truhe oder 80, Lücke fängt neu an",()=>{
+    const alt=ST.neuerStand();tage("2026-10-20",7).forEach(d=>alt.login[d]=1);assert.strictEqual(ST.serieMuenzen(alt),10+15+20+25+30+40+150);
+    const s=ST.neuerStand();tage("2026-11-02",7).forEach(d=>s.login[d]=1);assert.strictEqual(ST.serieMuenzen(s),5+8+10+12+15+20+80);
+    const mix=ST.neuerStand();tage("2026-10-30",4).forEach(d=>mix.login[d]=1);assert.strictEqual(ST.serieMuenzen(mix),10+15+20+12,"der Tag zählt, nicht der Beginn der Serie");
+    assert.ok(ST.truheOk(s,"k-komet","2026-11-08"));assert.ok(!ST.truheOk(s,"k-komet","2026-11-07"),"Tag 6 ist keine Truhe");
+    assert.ok(!ST.truheOk(s,"o-neon","2026-11-08"),"Legendär nicht");assert.ok(!ST.truheOk(s,"k-prisma","2026-11-08"),"Pass-Sache nicht");
+    assert.ok(!ST.truheOk(s,"k-lava","2026-11-08"),"Box-Sache nicht");
+    s.own["k-komet"]={w:"serie",d:"2026-11-08"};assert.strictEqual(ST.serieMuenzen(s),70);
+    assert.ok(!ST.truheOk(s,"s-feuer","2026-11-08"),"nur eine Sache pro Truhe");
+    const t=ST.neuerStand();["2026-11-02","2026-11-03","2026-11-05","2026-11-06"].forEach(d=>t.login[d]=1);assert.strictEqual(ST.serieLaenge(t,"2026-11-06"),2);
+    assert.strictEqual(ST.serieMuenzen(t),5+8+5+8);
+    const g=ST.neuerStand();tage("2026-11-02",15).forEach(d=>g.login[d]=1);assert.strictEqual(ST.serieMuenzen(g),2*(70+80)+5,"nach Tag 7 geht es mit Tag 1 weiter");});
+  await ok("Wochen-Herausforderungen: drei pro Woche ab 2.11., Fortschritt aus der ganzen Woche, 50 Münzen je Stück",()=>{
     assert.deepStrictEqual(ST.wochenErledigt({akt:{},tag:{},login:{},auf:{}},"2026-10-26"),[]);
     for(const w of tage("2026-11-02",70).filter((_,k)=>k%7===0)){const a=ST.wochenAufgaben(w);assert.strictEqual(new Set(a).size,3);a.forEach(id=>assert.ok(ST.WAUFG[id]));}
     const w="2026-11-09",s=ST.neuerStand();tage(w,7).forEach((d,k)=>{s.akt[d]={b:6,s:12,a:k<3?1:0,e:k===2?7:2};s.tag[d]={s:2,st:2};s.login[d]=1;});
     const st=ST.wochenStand(s,w);assert.deepStrictEqual([st.wb,st.ws,st.wa,st.we,st.wt,st.wl],[42,84,3,7,7,7]);
 
     const erl=ST.wochenErledigt(s,w),soll=ST.wochenAufgaben(w).filter(id=>id!=="wq");assert.deepStrictEqual(erl,soll,"alles außer Tagesaufgaben geschafft");
-    assert.strictEqual(ST.wochenMuenzen(s),100*erl.length);
+    assert.strictEqual(ST.wochenMuenzen(s),50*erl.length);
     s.akt[ST.plusTage(w,7)]={b:99,s:99,a:9,e:99};assert.strictEqual(ST.wochenStand(s,w).wb,42,"nächster Montag zählt nicht mit");
     const ohne=JSON.parse(JSON.stringify(s));ohne.akt={};ohne.tag={};ohne.login={};assert.strictEqual(ST.wochenErledigt(ohne,w).length,0);assert.strictEqual(ST.wochenMuenzen(ohne),0);});
-  await ok("Sternenpass: XP aus Bahnen (höchstens 250), Aufgaben, Bonus, Woche; Stufen bringen Münzen; Stufe 30 die Pass-Sache",()=>{
+  await ok("Sternenpass: XP aus Bahnen (höchstens 250), Aufgaben, Bonus, Woche; Sachen auf ihren Stufen, sonst Münzen",()=>{
     const s=ST.neuerStand(),d="2026-11-03";s.akt[d]={b:10,s:25,a:0,e:0};assert.strictEqual(ST.xpTag(s,d),175);
     s.akt[d]={b:40,s:100,a:0,e:0};assert.strictEqual(ST.xpTag(s,d),250);s.login[d]=1;assert.strictEqual(ST.xpTag(s,d),270);
     const ids=ST.aufgabenFuer(d);s.auf[d]=Object.fromEntries(ids.map(id=>[id,ST.AUFG[id].z]));assert.strictEqual(ST.xpTag(s,d),270+3*40+30);
     assert.strictEqual(ST.xpMonat(s,"2026-11"),420+100*ST.wochenErledigt(s,"2026-11-02").length,"Woche zählt für den Monat ihres Sonntags");
     const v=ST.neuerStand();tage("2026-11-01",30).forEach(t=>v.akt[t]={b:40,s:100,a:0,e:0});      // 30 × 250 = 7500 XP
-    assert.ok(ST.passStufe(ST.xpMonat(v,"2026-11"))===30);assert.ok(ST.passOk(v,"k-prisma"));assert.ok(!ST.passOk(ST.neuerStand(),"k-prisma"));assert.ok(!ST.passOk(v,"k-gold"));
-    assert.strictEqual(ST.passMuenzen(v),24*20+5*60+100,"Münzen aus dem Pass");
+    assert.ok(ST.passStufe(ST.xpMonat(v,"2026-11"))===30);assert.ok(!ST.passOk(ST.neuerStand(),"k-prisma"));assert.ok(!ST.passOk(v,"k-gold"));
+    const nov=["t-sternschnuppe","k-saturn-eis","j-schockwelle","t-kometenjaeger","s-feuer-blau","t-schwerkraft","k-prisma"];
+    for(const id of nov){assert.ok(ST.passOk(v,id),id);assert.strictEqual(ST.ITEM[id].pass,"2026-11");assert.ok(!(ST.ITEM[id].p>0)&&!ST.ITEM[id].ev&&!ST.ITEM[id].box,id);}
+    assert.deepStrictEqual(Object.values(ST.passSachen("2026-11")).sort(),nov.slice().sort(),"jede Pass-Sache hat genau eine Stufe");
+    assert.ok(new Set(nov.map(id=>id[0])).size>=4,"Kugel, Spur, Jubel und Titel");
+    // 23 Stufen ohne Sache: Stufe 5 bringt 40, die anderen 22 je 15, Stufe 30 zusätzlich 50
+    assert.strictEqual(ST.passMuenzen(v),22*15+40+50,"Münzen aus dem Pass");
+    const halb=ST.neuerStand();tage("2026-11-01",2).forEach(t=>halb.akt[t]={b:40,s:100,a:0,e:0});halb.akt["2026-11-03"]={b:10,s:12,a:0,e:0}; // 500 + 110 = 610 XP → Stufe 4
+    assert.strictEqual(ST.passStufe(ST.xpMonat(halb,"2026-11")),4);assert.ok(ST.passOk(halb,"t-sternschnuppe"));assert.ok(!ST.passOk(halb,"k-saturn-eis"));assert.ok(!ST.passOk(halb,"k-prisma"));
+    assert.strictEqual(ST.passMuenzen(halb),3*15);
     const okt=ST.neuerStand();tage("2026-10-01",31).forEach(t=>okt.akt[t]={b:40,s:100,a:0,e:0});assert.strictEqual(ST.passMuenzen(okt),0,"vor November gibt es keinen Pass");
-    const dez=ST.neuerStand();tage("2026-12-01",30).forEach(t=>dez.akt[t]={b:40,s:100,a:0,e:0});assert.strictEqual(ST.passMuenzen(dez),880+ST.PASS.ohneSache,"ohne eingetragene Pass-Sache gibt es Münzen");});
+    // ohne Eintrag: 24 × 15 + 5 × 40 + 50 + 150
+    const dez=ST.neuerStand();tage("2026-12-01",30).forEach(t=>dez.akt[t]={b:40,s:100,a:0,e:0});assert.strictEqual(ST.passMuenzen(dez),24*15+5*40+50+150,"ohne eingetragene Pass-Sachen gibt es Münzen");});
+  await ok("Weniger Münzen ab 2.11.: Aufgaben, Tagesbahn halb, Sterne und Asse wie bisher, alte Tage unverändert",()=>{
+    const halb={b5:10,st8:15,ot3:10,tages:15,en3:15,p3:15,up2:20,as1:20,wu:10,wi:10,dp:10};
+    for(const d of tage("2026-11-02",21)){const s=ST.neuerStand();const ids=ST.aufgabenFuer(d);s.auf[d]=Object.fromEntries(ids.map(id=>[id,ST.AUFG[id].z]));
+      assert.strictEqual(ST.muenzen(s)-ST.passMuenzen(s),ids.reduce((m,id)=>m+halb[id],0),d+" "+ids);}
+    const s=ST.neuerStand();s.tag={"2026-11-01":{s:2,st:3},"2026-11-02":{s:2,st:3},"2026-11-03":{s:5,st:1}};assert.strictEqual(ST.muenzen(s),15+15+8+9+8+3);
+    s.best={1:{s:1,st:3,a:1}};assert.strictEqual(ST.muenzen(s),30+17+11+12+15);
+    if(!VOR)return console.log("     (Fassung 236f1ed nicht im Git, Vergleich übersprungen)");
+    const a=VOR.neuerStand();a.best={1:{s:1,st:3,a:1},9:{s:2,st:2}};a.bonus=300;a.tag={"2026-10-31":{s:2,st:3},"2026-11-01":{s:1,st:3}};
+    for(const d of["2026-10-31","2026-11-01"])a.auf[d]=Object.fromEntries(VOR.aufgabenFuer(d).map(id=>[id,ST.AUFG[id].z]));
+    tage("2026-10-26",7).forEach(d=>{a.login[d]=1;a.akt[d]={b:8,s:20,a:1,e:3};});a.own={"k-komet":{w:"serie",d:"2026-11-01"},"k-mond":{w:"kauf",d:"2026-10-31"}};
+    const x=ST.sauber(JSON.parse(JSON.stringify(a)),420),y=VOR.sauber(JSON.parse(JSON.stringify(a)),420);
+    assert.strictEqual(ST.muenzen(x)-ST.passMuenzen(x),VOR.muenzen(y)-VOR.passMuenzen(y),"bis 1.11. gleich viele Münzen (der Pass beginnt erst am 1.11. und ist neu)");});
+  await ok("Gleich wie vorher: Shop-Wechsel, Tagesaufgaben und Wochen-Herausforderungen",()=>{if(!VOR)return;
+    for(const d of tage("2026-10-31",120)){const a=ST.shopFuer(d),b=VOR.shopFuer(d);assert.deepStrictEqual([a.tag,a.woche,a.neu,a.ang,a.angP],[b.tag,b.woche,b.neu,b.ang,b.angP],"Shop am "+d);
+      assert.deepStrictEqual(ST.aufgabenFuer(d),VOR.aufgabenFuer(d),d);if(d>="2026-11-02"&&ST.wocheVon(d)===d)assert.deepStrictEqual(ST.wochenAufgaben(d),VOR.wochenAufgaben(d),d);}});
+  await ok("Glücksbox: Banner alle 14 Tage, Hauptgewinn wechselt, nur was es zu dem Zeitpunkt gab",()=>{
+    const b0=ST.banner("2026-10-31"),b1=ST.banner("2026-11-16");
+    assert.deepStrictEqual([b0.von,b0.bis,b0.top],["2026-10-31","2026-11-15","k-galaxis"]);assert.strictEqual(ST.banner("2026-11-15"),b0);
+    assert.deepStrictEqual([b1.von,b1.bis,b1.top],["2026-11-16","2026-11-29","s-milchstrasse"],"neues Legendär ist Hauptgewinn seines ersten Banners");
+    assert.strictEqual(ST.banner("2026-11-30").top,"k-galaxis");assert.strictEqual(ST.banner("2026-12-14").top,"s-milchstrasse");
+    assert.ok(!b0.pool.legendaer.includes("s-milchstrasse"),"vor ihrem Datum nicht in der Box");
+    for(const d of tage("2026-10-31",120).filter((_,k)=>k%14===0)){const B=ST.banner(d),alle=[].concat(...Object.values(B.pool));
+      assert.strictEqual(new Set(alle).size,alle.length);assert.ok(B.pool.legendaer.includes(B.top));
+      for(const id of alle){const i=ST.ITEM[id];assert.ok(!i.ev&&!i.pass&&id!==ST.STANDARD[id[0]],id);assert.ok(i.box?i.box<=B.von:i.p>0,id);assert.strictEqual(ST.selVon(id),Object.keys(B.pool).find(k=>B.pool[k].includes(id)));}
+      for(const i of ST.ITEMS)if(i.p>0&&!i.neu)assert.ok(alle.includes(i.id),"Shop-Sache fehlt: "+i.id);}
+    const N2=laden(fs.readFileSync(path.join(W,"src/stand.js"),"utf8"),";ITEMS.push({id:'k-neu',n:'Neu',p:300,neu:'2026-11-23',f:'k'});ITEM['k-neu']=ITEMS[ITEMS.length-1];");
+    assert.ok(!N2.banner("2026-11-30").pool.selten.includes("k-neu"),"neue Shop-Sache erst nach ihren 14 Tagen unter Neu");
+    assert.ok(N2.banner("2026-12-14").pool.selten.includes("k-neu"));
+    const sb=s=>{const z=ST.neuerStand();z.box.z=s;return z;};
+    assert.deepStrictEqual(N2.boxZuege(sb([{d:"2026-11-20",t:1,n:10,u:"test1"}])).map(r=>r.id),ST.boxZuege(sb([{d:"2026-11-20",t:1,n:10,u:"test1"}])).map(r=>r.id),"neue Sachen ändern laufende Banner nicht");});
+  await ok("Glücksbox: kostet Münzen, gleiche Ziehung gleiches Ergebnis, Garantien halten, 50/50 mit Garantie",()=>{
+    const s=ST.neuerStand();s.bonus=10000;s.box.z=[{d:"2026-11-03",t:5,n:1,u:"aaaa1"},{d:"2026-11-03",t:6,n:10,u:"aaaa2"}];assert.strictEqual(ST.muenzen(s),10000-100-900);
+    const a=ST.boxZuege(s);assert.strictEqual(a.length,11);s.box.z.reverse();assert.deepStrictEqual(ST.boxZuege(s).map(r=>r.id),a.map(r=>r.id),"Reihenfolge kommt aus der Zeit");
+    const v=ST.neuerStand();for(let i=0;i<3000;i++)v.box.z.push({d:ST.plusTage("2026-10-31",i%100),t:i,n:10,u:"v"+i});
+    const z=ST.boxZuege(v),zahl={};let ohneL=0,ohneE=0,maxL=0,maxE=0,top=0,leg=0,nachVerlust=0,verloren=0,vorher=null;
+    for(const r of z){zahl[r.sel]=(zahl[r.sel]||0)+1;if(r.sel==="legendaer"){maxL=Math.max(maxL,ohneL+1);ohneL=0;leg++;if(r.top)top++;
+        if(vorher===false){verloren++;if(r.top)nachVerlust++;}vorher=r.top;}else ohneL++;
+      if(r.sel==="legendaer"||r.sel==="episch"){maxE=Math.max(maxE,ohneE+1);ohneE=0;}else ohneE++;}
+    assert.ok(maxL<=40,"spätestens die 40. ist legendär: "+maxL);assert.ok(maxE<=10,"spätestens die 10. ist episch: "+maxE);assert.strictEqual(nachVerlust,verloren,"nach verlorenem 50/50 kommt sicher der Hauptgewinn");
+    const q=k=>(zahl[k]||0)/z.length;assert.ok(q("legendaer")>.025&&q("legendaer")<.05,"Legendär "+q("legendaer"));assert.ok(q("episch")>.1&&q("episch")<.16,"Episch "+q("episch"));
+    assert.ok(q("selten")>.25&&q("selten")<.33);assert.ok(top/leg>.6&&top/leg<.72,"Hauptgewinn "+top/leg);
+    const p=ST.boxPity(v);assert.ok(p.leg>=1&&p.leg<=40&&p.epi>=1&&p.epi<=10);});
+  await ok("Glücksbox: Neues ins Inventar, Doppeltes wird Sternenstaub, Tausch kostet Staub, Geräte zusammen",()=>{
+    const s=ST.neuerStand();s.box.z=[{d:"2026-11-03",t:1,n:10,u:"bbbb1"},{d:"2026-11-03",t:2,n:10,u:"bbbb2"}];
+    s.own["k-mond"]={w:"kauf",d:"2026-11-01"};const r=ST.boxZuege(s),c=ST.sauber(JSON.parse(JSON.stringify(s)),420),seen=new Set();let staub=0;
+    for(const x of r){const dopp=seen.has(x.id)||x.id==="k-mond";seen.add(x.id);assert.strictEqual(x.neu,!dopp,x.id);assert.strictEqual(x.staub,dopp?ST.BOX.staub[x.sel]:0);staub+=x.staub;
+      if(!dopp)assert.deepStrictEqual(c.own[x.id],{w:"box",d:"2026-11-03"});}
+    assert.strictEqual(c.own["k-mond"].w,"kauf");assert.strictEqual(ST.staubStand(c),staub);
+    const f=ST.sauber({own:{"k-galaxis":{w:"box",d:"2026-11-03"}},eq:{k:"k-galaxis"}},420);assert.ok(!f.own["k-galaxis"],"ohne Ziehung keine Box-Sache");assert.strictEqual(f.eq.k,"k-standard");
+    const ausBox=Object.keys(c.own).sort(),tid=["l-pulsar","j-feuerwerk","k-lava","j-sternregen"].find(id=>!c.own[id]);
+    const t=JSON.parse(JSON.stringify(c));t.own[tid]={w:"staub",d:"2026-11-04"};assert.strictEqual(ST.staubStand(t),staub-ST.BOX.tausch[ST.selVon(tid)]);
+    assert.ok(ST.tauschbar("k-lava","2026-11-04")&&!ST.tauschbar("s-milchstrasse","2026-11-04")&&ST.tauschbar("s-milchstrasse","2026-11-16")&&!ST.tauschbar("k-gold","2026-11-04")&&!ST.tauschbar("k-prisma","2026-11-30"));
+    const a=ST.neuerStand(),b=ST.neuerStand();a.box.z=[{d:"2026-11-03",t:1,n:10,u:"bbbb1"}];b.box.z=[{d:"2026-11-03",t:1,n:10,u:"bbbb1"},{d:"2026-11-03",t:2,n:10,u:"bbbb2"}];b.own["k-mond"]={w:"kauf",d:"2026-11-01"};
+    const m=ST.zusammen(ST.sauber(a,420),ST.sauber(b,420));assert.strictEqual(m.box.z.length,2,"keine Ziehung doppelt");assert.deepStrictEqual(Object.keys(m.own).sort(),ausBox);
+    // Box früher als Kauf auf dem anderen Gerät: die Box gilt, der Kauf kostet nichts
+    const id=r.find(x=>x.neu&&ST.ITEM[x.id].p>0).id,k=ST.neuerStand();k.own[id]={w:"kauf",d:"2026-11-05"};k.bonus=5000;
+    const m2=ST.zusammen(ST.sauber(k,420),ST.sauber(b,420));assert.strictEqual(m2.own[id].w,"box");assert.strictEqual(ST.muenzen(m2),5000-1800-150,"Bonus, zwei Zehner, Mondstein");
+    const kaputt=ST.sauber({box:{z:[{d:"2026-10-01",t:1,n:1,u:"cccc1"},{d:"2026-11-03",t:1,n:3,u:"cccc2"},{d:"2026-11-03",t:1,n:1,u:"<b>"},{d:"2026-11-03",t:1,n:1,u:"cccc3"},{d:"2026-11-03",t:2,n:1,u:"cccc3"}]}},420);
+    assert.deepStrictEqual(kaputt.box.z.map(g=>g.u),["cccc3"],"vor dem Start, falsche Anzahl, falsche ID und doppelte fliegen raus");});
   await ok("Zusammenführen: Bestes gewinnt, Besitz vereinigt, Bonus vom Server, Einstellungen vom neueren, Tagesleistung und Bonus-Tage",()=>{
     const a=ST.neuerStand(),b=ST.neuerStand();a.t=100;b.t=200;a.bonus=500;b.bonus=99999;
     a.best={1:{s:4,st:1},2:{s:2,st:2,a:1}};b.best={1:{s:2,st:3},3:{s:1,st:3,a:1}};a.un=10;b.un=7;
@@ -97,11 +172,17 @@ async function logik(){
     assert.deepStrictEqual(r.own["k-gold"],{w:"geschenk",d:"2026-10-20"});assert.ok(r.own["s-feuer"]);
     assert.strictEqual(r.bonus,500);assert.strictEqual(r.eq.s,"s-feuer");assert.strictEqual(r.opt.ringe,false);assert.deepStrictEqual(r.tag["2026-10-30"],{s:1,st:3});
     assert.deepStrictEqual(r.akt,{"2026-11-02":{b:3,s:7,a:1,e:4},"2026-11-03":{b:1,s:1,a:0,e:0}});assert.deepStrictEqual(r.login,{"2026-11-02":1,"2026-11-03":1});});
+  await ok("Alte Stände vom Server ohne Box, Jubel, Titel und Ton lassen sich zusammenführen",()=>{
+    const alt={t:5,un:3,best:{},seen:{},cur:0,own:{"k-mond":{w:"kauf",d:"2026-10-30"}},eq:{k:"k-mond",s:"s-standard",l:"l-standard",o:"o-klassisch"},tag:{},auf:{},akt:{},login:{},endl:{best:0},opt:{ringe:true,vorschau:false,vib:true},auto:null,bonus:500};
+    const r=ST.zusammen(alt,ST.neuerStand());assert.deepStrictEqual([r.eq.k,r.eq.j,r.eq.t,r.opt.vorschau,r.opt.musik,r.opt.effekte],["k-mond","j-funken","t-keiner",false,true,true]);
+    assert.deepStrictEqual(r.box.z,[]);assert.strictEqual(ST.muenzen(r),500-150);});
   await ok("Prüfen: Unbekanntes fliegt raus, Grenzen halten, Angelegtes muss man besitzen",()=>{
     const s=ST.sauber({un:99999,best:{"0":{s:1,st:3},"5":{s:0,st:9,a:1},"9999":{s:1,st:3}},own:{"k-hack":{w:"kauf",d:"2026-10-30"},"k-gold":{w:"kauf",d:"kaputt"},"k-mond":{w:"hack",d:"2026-11-01"}},eq:{k:"k-gold",o:"o-neon"},opt:{ringe:"ja",vib:false},
       akt:{"2026-11-01":{b:9999,s:-4,a:"x",e:3},"kaputt":{b:1}},login:{"2026-11-01":1,"2026-11-02":0,"nix":1}},420);
     assert.strictEqual(s.un,420);assert.deepStrictEqual(s.best,{5:{s:1,st:3,a:1}});assert.deepStrictEqual(s.own,{});
     assert.strictEqual(s.eq.k,"k-standard");assert.strictEqual(s.eq.o,"o-klassisch");assert.strictEqual(s.opt.ringe,true);assert.strictEqual(s.opt.vib,false);
+    assert.deepStrictEqual([s.eq.j,s.eq.t,s.opt.musik,s.opt.effekte],["j-funken","t-keiner",true,true],"neue Fächer und Töne an");
+    assert.strictEqual(ST.sauber({eq:{j:"j-konfetti",t:"t-kometenjaeger"},opt:{musik:false}},420).eq.j,"j-funken");assert.strictEqual(ST.sauber({opt:{musik:false}},420).opt.musik,false);
     assert.deepStrictEqual(s.akt,{"2026-11-01":{b:500,s:0,a:0,e:3}});assert.deepStrictEqual(s.login,{"2026-11-01":1});});
   await ok("Alter Spielstand: Fortschritt bleibt, freigeschaltet bis drei nach der letzten, Halloween 2026 gehört dazu",()=>{
     const s=ST.ausAlt({un:4,best:{"1":{s:2,st:2},"320":{s:1,st:3}},seen:{start:1,sun:1,quatsch:1},skin:null,cur:319},420,"2026-10-30");
@@ -176,6 +257,26 @@ async function api(){daten=fs.mkdtempSync(path.join(os.tmpdir(),"gg-test-"));awa
     await req("POST","/api/sync",{stand:{t:Date.now(),tag:{[heute]:{s:4,st:1}}}},auth(A));await req("POST","/api/sync",{stand:{t:Date.now(),tag:{[heute]:{s:2,st:2}}}},auth(B));
     const r=await req("GET","/api/rangliste",null,auth(A));assert.strictEqual(r.s,200,r.t);assert.strictEqual(r.j.tage.length,2);assert.strictEqual(r.j.tage[0].tag,heute);
     assert.deepStrictEqual(r.j.tage[0].liste.map(e=>[e.name,e.s,e.ich]),[["Lena",2,false],["Artur",4,true]]);assert.deepStrictEqual(r.j.tage[1].liste,[]);});
+  await ok("Glücksbox auf dem Server: nur mit genug Münzen, Ergebnis nachgerechnet, Tausch nur mit genug Staub, Titel in der Rangliste",async()=>{
+    const k=await req("POST","/api/konto",{name:"Mira",pin:"4321",stand:{}});assert.strictEqual(k.s,200,k.t);const M=k.j.token;
+    const z1=[{d:heute,t:Date.now(),n:10,u:"mira0001"}];
+    const arm=await req("POST","/api/sync",{stand:{t:Date.now(),box:{z:z1}}},auth(M));assert.strictEqual(arm.j.stand.box.z.length,0,"ohne Münzen keine Ziehung");assert.strictEqual(arm.j.muenzen,0);
+    const u=await req("GET","/api/admin",null,admin),mira=u.j.spieler.find(p=>p.name==="Mira");
+    await req("POST","/api/admin/schenken",{id:mira.id,muenzen:1000,items:["t-kometenjaeger"]},admin);
+    const fake=ST.ITEMS.find(i=>i.box&&!ST.boxZuege({box:{z:z1},own:{}}).some(r=>r.id===i.id&&r.neu)).id;
+    const r=await req("POST","/api/sync",{stand:{t:Date.now(),box:{z:z1},own:{[fake]:{w:"box",d:heute}}}},auth(M));
+    assert.strictEqual(r.j.stand.box.z.length,1);assert.strictEqual(r.j.muenzen,100);
+    const soll=new Set(ST.boxZuege({box:{z:z1},own:{}}).filter(x=>x.neu).map(x=>x.id)),ist=Object.keys(r.j.stand.own).filter(id=>r.j.stand.own[id].w==="box");
+    assert.deepStrictEqual(ist.sort(),[...soll].sort(),"Box-Sachen genau wie nachgerechnet");assert.ok(!r.j.stand.own[fake]||soll.has(fake),"erfundene Box-Sache fliegt raus");
+    const zu=await req("POST","/api/sync",{stand:{t:Date.now(),box:{z:[{d:heute,t:Date.now()+1,n:10,u:"mira0002"},{d:ST.plusTage(heute,3),t:Date.now(),n:1,u:"mira0003"}]}}},auth(M));
+    assert.strictEqual(zu.j.stand.box.z.length,1,"zu teuer und Zukunft fliegen raus");assert.strictEqual(zu.j.muenzen,100);
+    const staub=ST.staubStand(r.j.stand),teuer=["l-pulsar","j-feuerwerk"].find(id=>!r.j.stand.own[id]&&ST.BOX.tausch.episch>staub);
+    if(teuer){const t=await req("POST","/api/sync",{stand:{t:Date.now(),own:{[teuer]:{w:"staub",d:heute}}}},auth(M));assert.ok(!t.j.stand.own[teuer],"zu wenig Sternenstaub");}
+    const nb=await req("POST","/api/sync",{stand:{t:Date.now(),own:{"s-milchstrasse":{w:"staub",d:heute}}}},auth(M));assert.ok(!nb.j.stand.own["s-milchstrasse"]||nb.j.stand.own["s-milchstrasse"].w==="box","vor ihrem Datum nicht tauschbar");
+    const ti=await req("POST","/api/sync",{stand:{t:Date.now()+5,own:{"t-kometenjaeger":{w:"geschenk",d:heute},"j-schockwelle":{w:"pass",d:heute}},eq:{t:"t-kometenjaeger",j:"j-schockwelle"},tag:{[heute]:{s:3,st:2}}}},auth(M));
+    assert.strictEqual(ti.j.stand.eq.t,"t-kometenjaeger");assert.strictEqual(ti.j.stand.eq.j,"j-funken","Jubel aus dem Pass muss man erst verdienen");assert.ok(!ti.j.stand.own["j-schockwelle"]);
+    const rl=await req("GET","/api/rangliste",null,auth(A));const e=rl.j.tage[0].liste.find(x=>x.name==="Mira");assert.strictEqual(e.titel,"t-kometenjaeger");
+    assert.strictEqual(rl.j.tage[0].liste.find(x=>x.name==="Artur").titel,undefined);});
   await ok("Admin: Code löschen, Abmelden beendet die Sitzung",async()=>{assert.strictEqual((await req("POST","/api/admin/code-loeschen",{code:code1},admin)).s,200);
     assert.strictEqual((await req("POST","/api/code",{code:code1},auth(A))).s,404);
     await req("POST","/api/admin/abmelden",{},admin);assert.strictEqual((await req("GET","/api/admin",null,admin)).s,401);});

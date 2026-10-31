@@ -1,4 +1,4 @@
-// Aussehen: Looks (ganze Themen), Planeten, Sonnen, Kugeln, Flugspuren, Ziel-Löcher, Hintergrund.
+// Aussehen: Looks (ganze Themen), Planeten, Sonnen, Kugeln, Flugspuren, Ziel-Löcher, Jubel beim Einlochen, Titel, Hintergrund.
 // Gezeichnet wird immer in den Kontext x mit den Farben C des angelegten Looks LK.
 let x=null,C=null,LK=null,anim=0;
 function rng(s){s=s>>>0;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};}
@@ -53,7 +53,7 @@ const LOOKS={
     c:{bg:'#06050d',star:'200,200,255',acc:'#2ef2ff',glow:'46,242,255',ring:'#ff2ec4',disk:'#2ef2ff',ball:'#ffffff',trail:'46,242,255',
       sun:['#fff7c2','#ffd23f','#ff8a00'],wh:['#2ef2ff','#ff2ec4'],shade:'rgba(0,0,0,0)',wind:'46,242,255'},pal:PAL_NE,sonne:'neonsun',mond:'neonmoon',stil:'neon',seed:5,bg:'raster'}
 };
-function setzeLook(id){LK=LOOKS[id]||LOOKS['o-klassisch'];C=LK.c;const r=document.documentElement;
+function setzeLook(id){LK=LOOKS[id]||LOOKS['o-klassisch'];C=LK.c;const r=document.documentElement;if(typeof TON!=='undefined')TON.look(id);
   for(const k in LK.css)r.style.setProperty('--'+k,LK.css[k]);r.style.setProperty('--feld',LK.c.bg);r.style.setProperty('--brand',LK.brand||'var(--display)');
   r.dataset.look=id.slice(2);const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=LK.css.void;}
 function mitLook(id,fn){const a=LK,b=C;LK=LOOKS[id];C=LK.c;try{fn();}finally{LK=a;C=b;}}
@@ -163,7 +163,16 @@ function lochTor(hx,hy){x.save();x.translate(hx,hy);const gold='#ffd76a';
   x.strokeStyle=gold;x.lineWidth=3.2;x.beginPath();x.arc(0,0,16.5,0,7);x.stroke();
   x.rotate(anim*.6);x.fillStyle=gold;for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillRect(-1.4,-24,2.8,i%2?4:6);}x.rotate(-anim*.6);
   x.strokeStyle=rgba(gold,.35);x.lineWidth=1;x.setLineDash([2,5]);x.lineDashOffset=anim*10;x.beginPath();x.arc(0,0,28,0,7);x.stroke();x.setLineDash([]);x.restore();}
-const LOECHER={'l-standard':lochStandard,'l-quasar':lochQuasar,'l-spirale':lochSpirale,'l-tor':lochTor};
+// Glücksbox: Pulsar mit zwei kreisenden Lichtkegeln, Feldlinien und Pulsen im Takt
+function lochPulsar(hx,hy){x.save();x.translate(hx,hy);const col=C.ring,ph=(anim*1.5)%1;
+  for(let k=0;k<2;k++){const f=(ph+k/2)%1;x.strokeStyle=rgba(col,.55*(1-f));x.lineWidth=.6+2*(1-f);x.beginPath();x.arc(0,0,13+f*24,0,7);x.stroke();}
+  x.save();x.rotate(anim*2.4);x.strokeStyle=rgba(col,.22);x.lineWidth=1;x.beginPath();x.ellipse(0,-12,6,12,0,0,7);x.moveTo(6,12);x.ellipse(0,12,6,12,0,0,7);x.stroke();
+  for(const s of[0,Math.PI]){x.save();x.rotate(s);const g=x.createLinearGradient(0,0,48,0);g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(.3,rgba(col,.6));g.addColorStop(1,rgba(col,0));
+    x.fillStyle=g;x.beginPath();x.moveTo(9,-2);x.lineTo(48,-9);x.lineTo(48,9);x.lineTo(9,2);x.closePath();x.fill();x.restore();}x.restore();
+  x.fillStyle='#000';x.beginPath();x.arc(0,0,11,0,7);x.fill();const pu=.55+.45*Math.max(0,Math.sin(anim*9));
+  x.strokeStyle='rgba(255,255,255,'+pu+')';x.lineWidth=2.2;x.beginPath();x.arc(0,0,12.3,0,7);x.stroke();
+  x.fillStyle=rgba(col,.5+.5*pu);x.beginPath();x.arc(0,0,2.2,0,7);x.fill();x.restore();}
+const LOECHER={'l-standard':lochStandard,'l-quasar':lochQuasar,'l-spirale':lochSpirale,'l-tor':lochTor,'l-pulsar':lochPulsar};
 
 // ---------- Kugeln ----------
 function kugelBasis(r,col){x.fillStyle=col;x.beginPath();x.arc(0,0,r,0,7);x.fill();}
@@ -185,6 +194,23 @@ const KUGELN={
     x.strokeStyle='rgba(255,255,255,.9)';x.lineWidth=Math.max(.6,r*.13);x.lineJoin='round';x.beginPath();for(let i=0;i<=6;i++){const a=i/6*Math.PI*2;i?x.lineTo(Math.cos(a)*R,Math.sin(a)*R):x.moveTo(Math.cos(a)*R,Math.sin(a)*R);}x.stroke();
     x.globalAlpha=.6;x.fillStyle='#fff';x.beginPath();x.moveTo(0,-R*.55);x.lineTo(R*.45,-R*.27);x.lineTo(0,0);x.lineTo(-R*.45,-R*.27);x.closePath();x.fill();x.globalAlpha=1;x.restore();
     const f=(anim*.9)%1;if(f<.25){const k=r*.6*(1-Math.abs(f-.125)/.125);x.strokeStyle='#fff';x.lineWidth=Math.max(.6,r*.11);x.lineCap='round';x.beginPath();x.moveTo(r*.55-k,-r*.6);x.lineTo(r*.55+k,-r*.6);x.moveTo(r*.55,-r*.6-k);x.lineTo(r*.55,-r*.6+k);x.stroke();}},
+  // Sternenpass November 2026: die Ringkugel in Eis, mit Glitzern auf dem Ring
+  'k-saturn-eis':r=>{const g=x.createRadialGradient(0,0,r*.5,0,0,r*2.2);g.addColorStop(0,'rgba(170,230,255,.35)');g.addColorStop(1,'rgba(170,230,255,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,r*2.2,0,7);x.fill();
+    x.strokeStyle='#8fd6ff';x.lineWidth=Math.max(1.2,r*.3);x.beginPath();x.ellipse(0,0,r*1.8,r*.55,-.4,Math.PI,2*Math.PI);x.stroke();kugelBasis(r,'#eaf8ff');x.fillStyle='#b9e3f7';x.fillRect(-r,-r*.2,2*r,r*.3);
+    x.fillStyle='rgba(255,255,255,.85)';x.beginPath();x.arc(-r*.4,-r*.45,r*.2,0,7);x.fill();x.beginPath();x.ellipse(0,0,r*1.8,r*.55,-.4,0,Math.PI);x.stroke();
+    const f=(anim*.8)%1,b=Math.PI*(.15+f*.7);x.save();x.rotate(-.4);x.fillStyle='rgba(255,255,255,'+Math.sin(f*Math.PI)+')';x.beginPath();x.arc(Math.cos(b)*r*1.8,Math.sin(b)*r*.55,Math.max(.6,r*.14),0,7);x.fill();x.restore();},
+  // Glücksbox: Basalt mit glühenden Rissen, die im Takt pulsieren
+  'k-lava':r=>{const pu=.65+.35*Math.sin(anim*3.2),g=x.createRadialGradient(0,0,r*.6,0,0,r*2.4);g.addColorStop(0,'rgba(255,110,30,'+.45*pu+')');g.addColorStop(1,'rgba(255,80,20,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,r*2.4,0,7);x.fill();
+    const b=x.createRadialGradient(-r*.3,-r*.3,0,0,0,r);b.addColorStop(0,'#8a3a26');b.addColorStop(1,'#3a170f');x.fillStyle=b;x.beginPath();x.arc(0,0,r,0,7);x.fill();
+    x.strokeStyle='rgba(255,140,50,'+(.55+.4*pu)+')';x.lineWidth=Math.max(.8,r*.12);x.stroke();x.save();x.beginPath();x.arc(0,0,r,0,7);x.clip();x.strokeStyle='rgb(255,'+(120+90*pu|0)+',40)';x.lineWidth=Math.max(.7,r*.16);x.lineJoin='round';x.lineCap='round';
+    x.beginPath();x.moveTo(-r,-r*.3);x.lineTo(-r*.35,-r*.1);x.lineTo(-r*.1,-r*.55);x.lineTo(r*.3,-r*.35);x.lineTo(r,-r*.62);x.moveTo(-r*.35,-r*.1);x.lineTo(-r*.2,r*.4);x.lineTo(r*.25,r*.25);x.lineTo(r*.55,r*.75);x.moveTo(r*.25,r*.25);x.lineTo(r,r*.1);x.stroke();
+    x.fillStyle='rgba(255,226,130,'+.85*pu+')';x.beginPath();x.arc(-r*.35,-r*.1,r*.13,0,7);x.arc(r*.25,r*.25,r*.11,0,7);x.fill();x.restore();
+    x.fillStyle='rgba(255,255,255,.14)';x.beginPath();x.arc(-r*.38,-r*.45,r*.2,0,7);x.fill();},
+  // Glücksbox, legendär: Kern einer Spiralgalaxie, zwei Arme drehen sich um die leuchtende Mitte
+  'k-galaxis':r=>{const g=x.createRadialGradient(0,0,0,0,0,r*2.9);g.addColorStop(0,'rgba(255,230,250,.6)');g.addColorStop(.45,'rgba(170,110,255,.24)');g.addColorStop(1,'rgba(90,60,200,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,r*2.9,0,7);x.fill();
+    x.save();x.rotate(-.5);x.scale(1,.58);x.rotate(anim*1.2);
+    for(let a=0;a<2;a++)for(let i=0;i<20;i++){const f=i/19,R=r*(.55+f*1.8),w=a*Math.PI+f*3.6;x.fillStyle='hsla('+(290-f*95)+',95%,'+(80-f*20)+'%,'+(1-f*.7)+')';x.beginPath();x.arc(Math.cos(w)*R,Math.sin(w)*R,r*(.27-f*.15),0,7);x.fill();}
+    x.restore();const c=x.createRadialGradient(-r*.2,-r*.2,0,0,0,r*.85);c.addColorStop(0,'#ffffff');c.addColorStop(.5,'#ffe9bf');c.addColorStop(1,'#ff9be0');x.fillStyle=c;x.beginPath();x.arc(0,0,r*.85,0,7);x.fill();},
   'k-kuerbis':r=>{kugelBasis(r,'#ff8a1f');x.fillStyle='#e8670c';x.beginPath();x.ellipse(-r*.45,0,r*.25,r*.95,0,0,7);x.ellipse(r*.45,0,r*.25,r*.95,0,0,7);x.fill();
     x.strokeStyle='#4f7d24';x.lineWidth=Math.max(1.2,r*.3);x.lineCap='round';x.beginPath();x.moveTo(0,-r*.85);x.lineTo(r*.25,-r*1.35);x.stroke();}
 };
@@ -200,9 +226,82 @@ const SPUREN={
   's-plasma':(T)=>{if(T.length<2)return;x.lineCap='round';for(let i=1;i<T.length;i++){const f=i/T.length;x.strokeStyle='rgba(170,120,255,'+f*.5+')';x.lineWidth=1+f*5;x.beginPath();x.moveTo(T[i-1][0],T[i-1][1]);x.lineTo(T[i][0],T[i][1]);x.stroke();}
     for(let i=1;i<T.length;i++){const f=i/T.length;x.strokeStyle='rgba(235,225,255,'+f*.8+')';x.lineWidth=.6+f*1.2;x.beginPath();x.moveTo(T[i-1][0],T[i-1][1]);x.lineTo(T[i][0],T[i][1]);x.stroke();}},
   's-regenbogen':(T)=>T.forEach((q,i)=>{const f=i/T.length;x.fillStyle='hsla('+((i*9+anim*140)%360)+',95%,66%,'+f*.8+')';x.beginPath();x.arc(q[0],q[1],.8+f*2,0,7);x.fill();}),
+  // Sternenpass November 2026: der Feuerschweif in Blau
+  's-feuer-blau':(T)=>T.forEach((q,i)=>{const f=i/T.length,j=Math.sin(anim*30+i)*f;x.fillStyle='rgba('+(50+170*f*f|0)+','+(110+130*f|0)+',255,'+f*.75+')';x.beginPath();x.arc(q[0]+j,q[1]-j,1+f*3.2,0,7);x.fill();}),
+  // Glücksbox, legendär: ein Band aus Sternenlicht, darin funkeln bunte Sterne
+  's-milchstrasse':(T)=>{if(T.length<2)return;x.lineCap='round';x.lineJoin='round';
+    for(const[w,a,col]of[[15,.08,'170,140,255'],[8,.14,'255,190,235'],[2.6,.38,'255,255,255']])for(let i=1;i<T.length;i++){const f=i/T.length;x.strokeStyle='rgba('+col+','+a*f*2+')';x.lineWidth=w*(.4+f*.6);x.beginPath();x.moveTo(T[i-1][0],T[i-1][1]);x.lineTo(T[i][0],T[i][1]);x.stroke();}
+    const cols=['255,255,255','255,214,140','160,220,255','255,170,230'];
+    for(let i=1;i<T.length;i++){const q=T[i],p=T[i-1],f=i/T.length,h=Math.sin(Math.round(q[0]*3)*12.9898+Math.round(q[1]*3)*78.233)*43758.5453,z=h-Math.floor(h),dx=q[0]-p[0],dy=q[1]-p[1],l=Math.hypot(dx,dy)||1,o=(z-.5)*12*f,
+        sx=q[0]-dy/l*o,sy=q[1]+dx/l*o,tw=.5+.5*Math.sin(anim*7+z*40);x.fillStyle='rgba('+cols[Math.floor(z*4)]+','+f*(.4+.6*tw)+')';x.beginPath();x.arc(sx,sy,.4+f*1.3*tw,0,7);x.fill();
+      if(z>.86&&tw>.7){x.strokeStyle='rgba(255,255,255,'+f*.8+')';x.lineWidth=.7;x.beginPath();x.moveTo(sx-3.2*f,sy);x.lineTo(sx+3.2*f,sy);x.moveTo(sx,sy-3.2*f);x.lineTo(sx,sy+3.2*f);x.stroke();}}},
   's-irrlicht':(T)=>T.forEach((q,i)=>{const f=i/T.length,o=Math.sin(i*.6+anim*7)*2.5*f;x.fillStyle='rgba(156,255,87,'+f*.6+')';x.beginPath();x.arc(q[0]+o,q[1]-o,1+f*2.2,0,7);x.fill();
     if(i%4===0){x.fillStyle='rgba(220,255,200,'+f*.5+')';x.beginPath();x.arc(q[0]-o,q[1]+o,.7,0,7);x.fill();}})
 };
+
+// ---------- Jubel beim Einlochen ----------
+// Jeder Jubel ist eine feste Abfolge: zu jedem Zeitpunkt t (Sekunden seit dem Einlochen) liegt fest, was zu sehen ist.
+// So läuft er gleich im Spielfeld, in der Großansicht und auf der Shop-Karte (dort als Standbild).
+const JUBEL_T=1.7;
+function stern4(px,py,L){x.beginPath();x.moveTo(px,py-L);x.quadraticCurveTo(px,py,px+L,py);x.quadraticCurveTo(px,py,px,py+L);x.quadraticCurveTo(px,py,px-L,py);x.quadraticCurveTo(px,py,px,py-L);x.fill();}
+const JUBEL={
+  'j-funken':(t,hx,hy)=>{const R=rng(31),cols=[C.ring,C.disk,'#ffffff'],k=1-Math.pow(.96,60*t);
+    for(let i=0;i<40;i++){const a=R()*6.283,v=2*(.25+R()),d=.5+R()*.9,s=.8+R()*2,l=1-t/d;if(l<=0)continue;const D=v*25*k;x.globalAlpha=l;x.fillStyle=cols[i%3];x.beginPath();x.arc(hx+Math.cos(a)*D,hy+Math.sin(a)*D,s*l+.3,0,7);x.fill();}x.globalAlpha=1;},
+  // Bunte Schnipsel fliegen hoch, drehen sich und segeln herunter
+  'j-konfetti':(t,hx,hy,o)=>{const R=rng(77),cols=['#ff5d8f','#ffd23f','#4fd1ff','#7dff8a','#b46cff','#ff9f43'],al=Math.min(1,(JUBEL_T-t)/.5),dir=o&&o.auf||-1;if(al<=0)return;
+    for(let i=0;i<46;i++){const a=dir*Math.PI/2+(R()-.5)*(dir<0?2.2:3.4),v=90+R()*150,rot=R()*6,sp=(R()-.5)*16,fl=4+R()*8,w=3+R()*2.5;
+      const e=1-Math.exp(-2.2*t),px=hx+Math.cos(a)*v*e/2.2+Math.sin(t*3+i)*6*t,py=hy+Math.sin(a)*v*e/2.2+70*t*t;
+      x.save();x.globalAlpha=al;x.translate(px,py);x.rotate(rot+sp*t);x.scale(1,Math.cos(t*fl+i));x.fillStyle=cols[i%6];x.fillRect(-w/2,-1.3,w,2.6);x.restore();}x.globalAlpha=1;},
+  // Goldene Sterne steigen auf, funkeln und rieseln herab
+  'j-sternregen':(t,hx,hy,o)=>{const R=rng(53),cols=['#ffd76a','#fff3b0','#ffffff'],dir=o&&o.auf||-1;
+    if(t<.25){x.strokeStyle='rgba(255,215,106,'+(1-t/.25)+')';x.lineWidth=2;x.beginPath();x.arc(hx,hy,12+t*90,0,7);x.stroke();}
+    for(let i=0;i<20;i++){const a=dir*Math.PI/2+(R()-.5)*(dir<0?2:3.2),v=110+R()*120,L=2.6+R()*2.6,d=1.1+R()*.6,l=Math.min(1,(d-t)/.35);if(l<=0)continue;
+      const e=(1-Math.exp(-3*t))/3,px=hx+Math.cos(a)*v*e,py=hy+Math.sin(a)*v*e+38*t*t,tw=.7+.3*Math.sin(t*16+i*2);
+      x.globalAlpha=l*.16;x.beginPath();x.arc(px,py,L*1.2,0,7);x.fill();x.globalAlpha=l;x.fillStyle=cols[i%3];stern4(px,py,L*tw);}x.globalAlpha=1;},
+  // Drei Raketen steigen auf und platzen nacheinander in Funkenkugeln
+  'j-feuerwerk':(t,hx,hy,o)=>{const R=rng(19),dir=o&&o.auf||-1;
+    for(let r=0;r<3;r++){const t0=r*.24,tr=t-t0;const ang=(r-1)*.5,hoch=74+R()*30,hue=[C.ring,C.acc,'#ff6fae'][r];const sparks=[];for(let i=0;i<30;i++)sparks.push([R()*6.283,55+R()*55]);
+      if(tr<0)continue;const steig=.32,bx=hx+Math.sin(ang)*hoch,by=hy+dir*Math.cos(ang)*hoch;
+      if(tr<steig){const f=1-Math.pow(1-tr/steig,2),px=hx+(bx-hx)*f,py=hy+(by-hy)*f;x.fillStyle='#fff';x.beginPath();x.arc(px,py,1.8,0,7);x.fill();
+        x.strokeStyle=rgba(hue,.6);x.lineWidth=1.4;x.beginPath();x.moveTo(px,py);x.lineTo(hx+(bx-hx)*Math.max(0,f-.25),hy+(by-hy)*Math.max(0,f-.25));x.stroke();continue;}
+      const tb=tr-steig,l=1-tb/.95;if(l<=0)continue;
+      if(tb<.14){x.fillStyle='rgba(255,255,255,'+(1-tb/.14)*.8+')';x.beginPath();x.arc(bx,by,6+tb*60,0,7);x.fill();}
+      const e=(1-Math.exp(-2.6*tb))/2.6;x.globalAlpha=l;for(const[a,v]of sparks){const px=bx+Math.cos(a)*v*e,py=by+Math.sin(a)*v*e+26*tb*tb;x.fillStyle=hue;x.beginPath();x.arc(px,py,1.5*l+.4,0,7);x.fill();
+        x.fillStyle='rgba(255,255,255,'+.7*l+')';x.beginPath();x.arc(px,py,.6,0,7);x.fill();}x.globalAlpha=1;}},
+  // Sternenpass November 2026: Lichtblitz, drei Druckwellen rollen über das Feld, Speedlines zeigen nach außen
+  'j-schockwelle':(t,hx,hy)=>{if(t<.2){const g=x.createRadialGradient(hx,hy,0,hx,hy,40);g.addColorStop(0,'rgba(255,255,255,'+(1-t/.2)+')');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.beginPath();x.arc(hx,hy,40,0,7);x.fill();}
+    [['#ffffff',0,4],[C.ring,.12,3],[C.acc,.24,2.4]].forEach(([col,t0,lw])=>{const tr=t-t0;if(tr<0||tr>1.1)return;const rad=12+tr*200*(1-tr*.3),l=1-tr/1.1;
+      x.strokeStyle='rgba(0,0,0,'+.25*l+')';x.lineWidth=lw*3*l+1;x.beginPath();x.arc(hx,hy,Math.max(1,rad-lw*2),0,7);x.stroke();
+      x.strokeStyle=rgba(col,l);x.lineWidth=lw*l+.4;x.beginPath();x.arc(hx,hy,rad,0,7);x.stroke();});
+    if(t<.7){const l=1-t/.7;x.strokeStyle='rgba(255,255,255,'+.7*l+')';x.lineWidth=1.2;x.lineCap='round';x.beginPath();for(let i=0;i<16;i++){const a=i/16*Math.PI*2+.2,r1=18+t*160,r2=r1+10+16*l;x.moveTo(hx+Math.cos(a)*r1,hy+Math.sin(a)*r1);x.lineTo(hx+Math.cos(a)*r2,hy+Math.sin(a)*r2);}x.stroke();}}
+};
+// o.auf: -1 nach oben (Standard), 1 nach unten, wenn oben kein Platz ist
+function drawJubel(id,t,hx,hy,o){if(t<0||t>JUBEL_T)return;(JUBEL[id]||JUBEL['j-funken'])(t,hx,hy,o);}
+// Standbild für Karten: der Moment, in dem der Jubel am meisten zeigt
+const JUBEL_STILL={'j-funken':.22,'j-konfetti':.5,'j-sternregen':.55,'j-feuerwerk':.72,'j-schockwelle':.3};
+
+// ---------- Titel ----------
+// Ein Titel steht neben dem Namen in Rangliste und Profil. Gezeichnet als Schleife mit Wappen.
+const TITEL_STIL={'t-keiner':{c:'#8b93b5'},'t-sternschnuppe':{c:'#ffd76a',sym:'schnuppe'},'t-kometenjaeger':{c:'#7fe0ff',sym:'komet'},'t-schwerkraft':{c:'#c39bff',sym:'orbit'}};
+function titelFarbe(id){return(TITEL_STIL[id]||TITEL_STIL['t-keiner']).c;}
+function titelZeichnen(id){const S=TITEL_STIL[id]||TITEL_STIL['t-keiner'],col=S.c,name=(ITEM[id]||{}).n||'';x.save();
+  if(!S.sym){x.strokeStyle=rgba(col,.6);x.setLineDash([4,4]);x.lineWidth=1.5;x.beginPath();x.roundRect?x.roundRect(18,34,84,26,8):x.rect(18,34,84,26);x.stroke();x.setLineDash([]);
+    x.fillStyle=col;x.font='500 11px Rubik, system-ui, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(name,60,47);x.restore();return;}
+  const g=x.createRadialGradient(60,30,2,60,30,40);g.addColorStop(0,rgba(col,.45));g.addColorStop(1,rgba(col,0));x.fillStyle=g;x.beginPath();x.arc(60,30,40,0,7);x.fill();
+  // Wappen
+  x.fillStyle='#141936';x.beginPath();x.arc(60,30,17,0,7);x.fill();x.strokeStyle=col;x.lineWidth=2.2;x.stroke();x.save();x.translate(60,30);
+  if(S.sym==='schnuppe'){x.strokeStyle=rgba(col,.7);x.lineCap='round';for(let k=0;k<3;k++){x.lineWidth=2.4-k*.6;x.beginPath();x.moveTo(-1-k*1.5,1+k*3);x.lineTo(-12+k,8+k*3);x.stroke();}x.fillStyle=col;stern4(3,-3,8.5);x.fillStyle='#fff';stern4(3,-3,3.5);}
+  else if(S.sym==='komet'){const t=x.createLinearGradient(-12,10,4,-4);t.addColorStop(0,rgba(col,0));t.addColorStop(1,rgba(col,.9));x.fillStyle=t;x.beginPath();x.moveTo(-13,12);x.lineTo(1,-8);x.lineTo(8,-1);x.closePath();x.fill();x.fillStyle='#eafcff';x.beginPath();x.arc(4,-4,5,0,7);x.fill();
+    x.strokeStyle=col;x.lineWidth=1.4;x.beginPath();x.arc(4,-4,8.5,-2.4,.8);x.stroke();}
+  else{x.strokeStyle=rgba(col,.8);x.lineWidth=1.2;x.beginPath();x.ellipse(0,0,13,5,-.5,0,7);x.stroke();x.beginPath();x.ellipse(0,0,13,5,.6,0,7);x.stroke();x.fillStyle=col;x.beginPath();x.arc(0,0,4.5,0,7);x.fill();
+    const a=anim*2.2;x.fillStyle='#fff';x.beginPath();x.arc(Math.cos(a)*13*Math.cos(-.5)-Math.sin(a)*5*Math.sin(-.5),Math.cos(a)*13*Math.sin(-.5)+Math.sin(a)*5*Math.cos(-.5),1.8,0,7);x.fill();}
+  x.restore();
+  // Schleife mit Namen, ein Glanz läuft darüber
+  const y=56,h=22;x.fillStyle=rgba(col,.55);for(const s of[-1,1]){x.beginPath();x.moveTo(60+s*44,y+5);x.lineTo(60+s*56,y+5);x.lineTo(60+s*51,y+h/2+5);x.lineTo(60+s*56,y+h+5);x.lineTo(60+s*44,y+h+5);x.closePath();x.fill();}
+  const bg=x.createLinearGradient(0,y,0,y+h);bg.addColorStop(0,col);bg.addColorStop(1,rgba(col,.75));x.fillStyle=bg;x.beginPath();x.moveTo(14,y);x.lineTo(106,y);x.lineTo(102,y+h/2);x.lineTo(106,y+h);x.lineTo(14,y+h);x.lineTo(18,y+h/2);x.closePath();x.fill();
+  x.save();x.clip();const gx=((anim*.45)%1.6-.3)*120;const sh=x.createLinearGradient(gx-14,0,gx+14,0);sh.addColorStop(0,'rgba(255,255,255,0)');sh.addColorStop(.5,'rgba(255,255,255,.55)');sh.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=sh;x.fillRect(0,y,120,h);x.restore();
+  x.fillStyle='#171026';let fs=12;x.font='600 '+fs+'px "Chakra Petch", system-ui, sans-serif';while(fs>8&&x.measureText(name).width>74){fs-=.5;x.font='600 '+fs+'px "Chakra Petch", system-ui, sans-serif';}
+  x.textAlign='center';x.textBaseline='middle';x.fillText(name,60,y+h/2+.5);x.restore();}
 
 // ---------- Hintergrund ----------
 function buildBg(w,h,k){const c=document.createElement('canvas'),g=c.getContext('2d'),r=rng(LK.seed);c.width=w;c.height=h;

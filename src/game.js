@@ -1,4 +1,4 @@
-// Galaxy Golf – Spielfeld. Erwartet LV (Kampagne), TG (Tagesbahnen), AG (Bahnen der Tagesaufgaben) und physics.js, gen.js, stand.js, look.js.
+// Galaxy Golf – Spielfeld. Erwartet LV (Kampagne), TG (Tagesbahnen), AG (Bahnen der Tagesaufgaben) und physics.js, gen.js, stand.js, look.js, ton.js.
 const N=LV.length;
 const TIERS=['Leicht','Mittel','Schwer','Extrem','Kosmos'];
 const $=id=>document.getElementById(id);
@@ -28,8 +28,10 @@ function eventsPruefen(){const d=datum();let vorbei=null;
 const offeneEvents=()=>EVENTS.filter(e=>imEvent(e,datum())&&e.items.some(id=>!st.own[id]));
 // Sternenpass des laufenden Monats
 function passJetzt(){const mon=datum().slice(0,7),xp=mon>=PASS.ab?xpMonat(st,mon):0;return{mon,xp,stufe:passStufe(xp)};}
-// Stufe 30 erreicht: die Pass-Sache des Monats kommt ins Inventar (der Server prüft das nach)
-function passPruefen(){const p=passJetzt(),P=PAESSE[p.mon];if(P&&p.stufe>=PASS.stufen&&!st.own[P.item]){st.own[P.item]={w:'pass',d:datum()};persist();return P.item;}return null;}
+// Stufe mit Sache erreicht: sie kommt ins Inventar (der Server prüft das nach). Gibt die neuen Sachen zurück.
+function passPruefen(){const p=passJetzt();if(p.mon<PASS.ab)return[];const S=passSachen(p.mon),neu=[];
+  for(const k in S)if(p.stufe>=+k&&!st.own[S[k]]){st.own[S[k]]={w:'pass',d:datum()};neu.push(S[k]);}
+  if(neu.length)persist();return neu;}
 SEEN.push(...EVENTS.map(e=>'ev-'+e.id));
 
 // ---------- Größe und Ausrichtung ----------
@@ -45,10 +47,10 @@ function size(){const f=$('field'),fw=f.clientWidth,fh=f.clientHeight;if(!fw||!f
 let rzq=0;new ResizeObserver(()=>{cancelAnimationFrame(rzq);rzq=requestAnimationFrame(size);}).observe($('field'));
 
 // ---------- Zustand ----------
-let zust='aim',ball=null,shots=0,drag=null,hint=null,tipp=false,trail=[],t=0,acc=0,frames=0,sinkT=0,parts=[],menuTier=0,gewinn=0,fertig=[];
+let zust='aim',ball=null,shots=0,drag=null,hint=null,tipp=false,trail=[],t=0,acc=0,frames=0,sinkT=0,jubelT=-1,parts=[],menuTier=0,gewinn=0,fertig=[];
 function home(){ball={x:lvl.b[0],y:lvl.b[1],vx:0,vy:0,cd:0};trail=[];t=0;frames=0;}
 // Dieselbe Bahn noch einmal laden, ohne sie geschafft zu haben, setzt die Schläge nicht zurück – sonst wären Sterne geschenkt.
-function setBahn(b,seed){const offen=b===bahn&&zust!=='won'&&zust!=='sink';bahn=b;lvl=inst(b);looks=mkLooks(b,seed);if(!offen){shots=0;tipp=false;}hint=null;drag=null;zust='aim';home();$('ov').hidden=true;ui();intro();}
+function setBahn(b,seed){const offen=b===bahn&&zust!=='won'&&zust!=='sink';bahn=b;jubelT=-1;lvl=inst(b);looks=mkLooks(b,seed);if(!offen){shots=0;tipp=false;}hint=null;drag=null;zust='aim';home();$('ov').hidden=true;ui();intro();}
 function load(i){lauf=null;aufg=null;if(modus!=='kampagne')bahn=null;modus='kampagne';li=Math.max(0,Math.min(N-1,i));st.cur=li;persist();setBahn(LV[li],li);}
 // Tagesbahn: eine pro Tag aus dem Vorrat, für alle gleich
 const TAG0=Date.UTC(2026,9,30);
@@ -107,7 +109,7 @@ cv.addEventListener('pointermove',e=>{if(!drag)return;const p=pos(e);drag.x=p.x;
 cv.addEventListener('pointerup',release);cv.addEventListener('pointercancel',()=>drag=null);
 function release(){if(!drag)return;const pw=power();drag=null;if(pw.l<8)return;let v=[pw.x,pw.y];
   if(hint&&Math.hypot(pw.x-hint.vx,pw.y-hint.vy)<.6){v=[hint.vx,hint.vy];say('Tipp-Schuss','#5fd39a');}
-  hint=null;home();ball.vx=v[0];ball.vy=v[1];zust='fly';shots++;ui();}
+  hint=null;home();ball.vx=v[0];ball.vy=v[1];zust='fly';shots++;TON.sfx('schuss',pw.l/150);ui();}
 function toggleHint(){if(zust!=='aim'||!$('ov').hidden)return;if(modus==='endlos'){say('Im Endlos-Modus gibt es keinen Tipp');return;}
   if(hint){hint=null;ui();say('Tipp ausgeblendet');return;}
   tipp=true;hint={vx:lvl.s[0],vy:lvl.s[1],path:[]};simulate(lvl,hint.vx,hint.vy,hint.path);ui();say('Zum Kreis ziehen, bei Grün loslassen','var(--acc)');}
@@ -116,19 +118,20 @@ function toggleHint(){if(zust!=='aim'||!$('ov').hidden)return;if(modus==='endlos
 function burst(px,py,n,cols,sp){for(let i=0;i<n;i++){const a=Math.random()*6.283,v=sp*(.25+Math.random());parts.push({x:px,y:py,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:1,d:.5+Math.random()*.9,c:cols[i%cols.length],s:.8+Math.random()*2});}}
 function tick(){t+=DT;const e=stepBody(lvl,ball,t);frames++;
   if(frames%2===0){trail.push([ball.x,ball.y]);if(trail.length>60)trail.shift();}
-  if(e==='warp'){trail=[];burst(ball.x,ball.y,18,C.wh,1.6);say('Wurmloch!',C.wh[0]);}
+  if(e==='warp'){trail=[];burst(ball.x,ball.y,18,C.wh,1.6);say('Wurmloch!',C.wh[0]);TON.sfx('wurmloch');}
   if(e==='hole')return win();
-  if(e==='burn')return fail('Verglüht! Zu nah an der Sonne.',[C.sun[1],C.sun[2],'#fff']);
-  if(e==='crash')return fail(istHW()?'Saures! Aufgeschlagen.':'Aufgeschlagen. Nochmal.',['#ff7a59','#ffd0a8','#ffffff']);
-  if(e==='out')return fail(istHW()?'In der Nacht verschwunden.':'Ab ins All.',[C.acc]);
-  if(frames>=MAXF)return fail(istHW()?'Spukt jetzt im Orbit.':'Im Orbit gefangen.',[C.acc]);}
+  if(e==='burn'){TON.sfx('verglueht');return fail('Verglüht! Zu nah an der Sonne.',[C.sun[1],C.sun[2],'#fff']);}
+  if(e==='crash'){TON.sfx('aufschlag');return fail(istHW()?'Saures! Aufgeschlagen.':'Aufgeschlagen. Nochmal.',['#ff7a59','#ffd0a8','#ffffff']);}
+  if(e==='out'){TON.sfx('weg');return fail(istHW()?'In der Nacht verschwunden.':'Ab ins All.',[C.acc]);}
+  if(frames>=MAXF){TON.sfx('weg');return fail(istHW()?'Spukt jetzt im Orbit.':'Im Orbit gefangen.',[C.acc]);}}
 function fail(m,cols){burst(ball.x,ball.y,30,cols,2.2);zust='aim';home();say(m,'var(--acc)');
   if(modus==='endlos'&&shots>=limit())laufEnde();}
 function sterne(){return shots<=lvl.par-1?3:shots<=lvl.par?2:1;}
 function aufgabe(id,wert,hoechst){const d=datum();if(!aufgabenFuer(d).includes(id))return;const a=st.auf[d]||(st.auf[d]={}),z=AUFG[id].z,alt=a[id]|0;
   const neu=Math.min(z,hoechst?Math.max(alt,wert):alt+wert);if(neu===alt)return;a[id]=neu;if(alt<z&&neu>=z)fertig.push(AUFG[id]);}
-let xpPlus=0,passNeu=null,passSache=null,wocheNeu=[];
-function win(){zust='sink';sinkT=0;ball.x=lvl.h[0];ball.y=lvl.h[1];burst(lvl.h[0],lvl.h[1],40,[C.ring,C.disk,'#ffffff'],2);
+let xpPlus=0,passNeu=null,passSache=[],wocheNeu=[];
+// Einlochen: der angelegte Jubel spielt am Loch, die Karte kommt danach
+function win(){zust='sink';sinkT=0;jubelT=0;ball.x=lvl.h[0];ball.y=lvl.h[1];TON.sfx('loch');
   const n=sterne(),vorher=muenzen(st),ass=shots===1&&!tipp,d=datum(),w=wocheVon(d),pv=passJetzt(),wv=wochenErledigt(st,w);fertig=[];
   if(modus==='kampagne'){const k=li+1,prev=st.best[k];st.best[k]={s:Math.min(shots,prev?prev.s:99),st:Math.max(n,prev?prev.st:0)};if(ass||(prev&&prev.a))st.best[k].a=1;st.un=Math.max(st.un,Math.min(N,k+3));}
   else if(modus==='tages'){const prev=st.tag[tagKey];st.tag[tagKey]={s:Math.min(shots,prev?prev.s:99),st:Math.max(n,prev?prev.st:0)};aufgabe('tages',1);}
@@ -155,7 +158,8 @@ function showWin(){const n=sterne(),h=istHW();
   $('card').innerHTML='<div class="stars">'+'★'.repeat(n)+'<i>'+'★'.repeat(3-n)+'</i></div><h2 class="big">'+title+'</h2><p>'+p+'</p>'+extra+'<div class="row wrap">'+knoepfe+'</div>';
   if($('again'))$('again').onclick=()=>modus==='tages'?setBahn(bahn,100000+tagIndex(tagKey)):modus==='aufgabe'?startAufgabe(aufg.id,aufg.i):load(li);
   if($('rangl'))$('rangl').onclick=()=>zeige('rang');
-  if(passSache){const id=passSache;passSache=null;setTimeout(()=>moment({id,titel:'Sternenpass geschafft!',text:'Alle 30 Stufen. Diese Belohnung gibt es nur in diesem Monat.'}),500);}
+  for(let k=0;k<n;k++)TON.sfx('stern',k,.12+k*.16);if(gewinn>0)TON.sfx('muenzen',0,.2+n*.16);if(passNeu)TON.sfx('stufe',0,.5+n*.16);
+  if(passSache.length){const l=passSache;passSache=[];setTimeout(()=>l.forEach(id=>moment(passMoment(id))),500);}
   $('nx').onclick=weiter;$('ov').hidden=false;$('nx').focus({preventScroll:true});}
 function weiter(){if(modus==='kampagne')li===N-1?showMenu():load(li+1);else if(modus==='tages')zeige('home');
   else if(modus==='aufgabe'){if(aufg.i>=aufg.idx.length-1)zeige('aufg','heute');else startAufgabe(aufg.id,aufg.i+1);}else endlosWeiter();}
@@ -212,6 +216,7 @@ function render(){const L=lvl,P=planetsAt(L,t);
     x.strokeStyle='rgba('+C.star+',.25)';x.lineWidth=1;x.beginPath();x.moveTo(drag.sx,drag.sy);x.lineTo(drag.x,drag.y);x.stroke();
     const f=pw.l/150;x.fillStyle='rgba(255,255,255,.1)';x.fillRect(L.b[0]-20,L.b[1]+15,40,4);x.fillStyle=f>.85?'#ff7a59':'rgb('+C.glow+')';x.fillRect(L.b[0]-20,L.b[1]+15,40*f,4);}
   for(const p of parts){x.globalAlpha=Math.max(0,p.l);x.fillStyle=p.c;x.beginPath();x.arc(p.x,p.y,p.s*p.l+.3,0,7);x.fill();}x.globalAlpha=1;
+  if(jubelT>=0)drawJubel(st.eq.j,jubelT,L.h[0],L.h[1],{auf:L.h[1]<130?1:-1});
   if(zust==='sink'){const k=Math.min(1,sinkT/.6),a=k*12;drawBall(st.eq.k,L.h[0]+Math.cos(a)*14*(1-k),L.h[1]+Math.sin(a)*5*(1-k),1-k);}
   else if(zust!=='won')drawBall(st.eq.k,ball.x,ball.y,1);}
 
@@ -219,7 +224,8 @@ let last=performance.now();
 function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;anim+=dt;
   if(spielSichtbar()){
     if(zust==='fly'){acc+=dt;let n=0;while(acc>=DT&&zust==='fly'&&n<40){acc-=DT;tick();n++;}}else acc=0;
-    if(zust==='sink'){sinkT+=dt;if(sinkT>.75){zust='won';showWin();}}
+    if(zust==='sink'){sinkT+=dt;if(sinkT>.95){zust='won';showWin();}}
+    if(jubelT>=0){jubelT+=dt;if(jubelT>JUBEL_T)jubelT=-1;}
     for(const p of parts){p.x+=p.vx*dt*60;p.y+=p.vy*dt*60;p.vx*=.96;p.vy*=.96;p.l-=dt/p.d;}parts=parts.filter(p=>p.l>0);
     if(lvl){fxStep(dt,lvl.W,lvl.H);if(cv.width)render();}}
   else if(homeSichtbar())homeFrame(dt);
