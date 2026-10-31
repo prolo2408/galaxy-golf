@@ -91,7 +91,7 @@ kbd{font-family:var(--display);font-size:11px;border:1px solid var(--line);borde
 .hkopf .brand{font-size:30px}
 :root[data-look="halloween"] .hkopf .brand{font-size:36px}
 .mzbig{flex:none;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums;padding:8px 14px;border-radius:999px;background:color-mix(in srgb,var(--panel),transparent 15%)}
-.hallo{margin:0;flex:1 0 auto!important;color:var(--dim);font-size:14px;min-height:190px}
+.hallo{margin:0;flex:1 0 auto!important;color:var(--dim);font-size:14px;min-height:120px}
 .hinhalt>button,.hinhalt>div,.hinhalt>section,.hinhalt>nav{flex:none}
 .gross{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--display);font-size:20px;font-weight:600;padding:16px}
 .gross small{font-family:var(--body);font-weight:400;font-size:13px;opacity:.8}
@@ -215,7 +215,7 @@ input:disabled{opacity:.5}
 .dkarte h3{margin:0;font-family:var(--display);font-size:20px}
 .dkarte p{margin:0;color:var(--dim);line-height:1.5}
 .dkarte .row button{flex:1}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:10;max-width:min(420px,calc(100% - 32px));box-sizing:border-box;
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);z-index:10;max-width:min(420px,calc(100% - 32px));box-sizing:border-box;
   background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 16px;font-size:14.5px;line-height:1.4;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
 .toast.an{opacity:1;transform:translate(-50%,0)}
 
@@ -231,7 +231,7 @@ input:disabled{opacity:.5}
   .side{display:flex;grid-area:side;flex-direction:column;gap:22px;min-height:0;overflow:hidden}
   .bar{display:grid;grid-template-columns:1fr 1fr}
   .msg{font-size:16px}
-  .hallo{min-height:240px}
+  .hallo{min-height:200px}
 }
 @media (max-height:600px){.side .legend{display:none}}
 @media (hover:none){.side .keys{display:none}}
@@ -409,3 +409,63 @@ input:disabled{opacity:.5}
 @media (prefers-reduced-motion:reduce){.bdots i.jetzt,.karte.hl canvas,#m-item,.mrar,.minhalt h2,.mname,.mtext,.minhalt .row{animation:none}}
 button.go .coin{background:#ffe7a3;box-shadow:inset 0 0 0 .13em #a8751a,0 0 0 1.5px rgba(34,23,3,.5)}
 @media (max-width:400px){.slot b{font-size:12px}}
+
+/* ---------- Untere Leiste ---------- */
+.leiste{position:fixed;left:0;right:0;bottom:0;z-index:7;display:flex;justify-content:center;background:color-mix(in srgb,var(--void),var(--panel) 45%);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.leiste-in{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;width:100%;max-width:560px}
+.reiter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:6px 2px;border:0;border-radius:12px;background:transparent;color:var(--dim);font-size:11.5px;font-weight:500;letter-spacing:.01em}
+.reiter:hover{background:color-mix(in srgb,var(--panel2),transparent 30%);color:var(--ink)}
+.reiter svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.reiter[data-reiter="mehr"] svg{fill:currentColor;stroke:none}
+.reiter[aria-current="page"]{color:var(--acc);background:color-mix(in srgb,var(--acc),transparent 88%)}
+.reiter .punkt{position:absolute;top:6px;left:calc(50% + 9px);margin:0;box-shadow:0 0 0 2px color-mix(in srgb,var(--void),var(--panel) 45%)}
+.hinhalt{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.sinhalt{padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+
+/* ---------- Startbildschirm: kompakt ---------- */
+.hkr{display:flex;align-items:center;gap:8px;flex:none}
+.bonuschip{position:relative;flex:none;display:flex;align-items:center;justify-content:center;width:44px;min-height:44px;padding:0;border-radius:50%;color:var(--gold);
+  background:color-mix(in srgb,var(--gold),var(--panel) 85%);border-color:color-mix(in srgb,var(--gold),var(--line) 45%);animation:wackeln 3.5s ease-in-out infinite}
+.bonuschip svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.bonuschip .punkt{position:absolute;top:2px;right:4px;margin:0}
+@keyframes wackeln{0%,86%,100%{transform:none}89%{transform:rotate(-6deg)}93%{transform:rotate(6deg)}96%{transform:rotate(-3deg)}}
+.hstatus{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hstatus button{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 8px;text-align:left;padding:10px 12px;background:color-mix(in srgb,var(--panel),transparent 8%)}
+.hstatus span:first-child{font-size:12.5px;color:var(--dim)}
+.hstatus b{font-family:var(--display);font-size:15px;font-weight:500;white-space:nowrap}
+.hstatus b small{font-size:12px;color:var(--dim)}
+.hbar{grid-column:1/-1;display:block;height:4px;border-radius:999px;background:color-mix(in srgb,var(--line),transparent 20%);overflow:hidden}
+.hbar i{display:block;height:100%;border-radius:inherit;background:var(--acc)}
+.hpass b{color:#5fe0c8}.hpass .hbar i{background:linear-gradient(90deg,#5fe0c8,#7ad3ff)}
+
+/* ---------- Aufgaben-Reiter, Mehr ---------- */
+.bonusok{margin:0;display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--dim);padding:2px 2px}
+.bonusok .chk{background:var(--t0);border-color:var(--t0);box-shadow:inset 0 0 0 3px var(--void);flex:none}
+.mzeile{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;padding:14px;border-radius:14px}
+.mzeile svg{width:26px;height:26px;fill:none;stroke:var(--acc);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.mzeile span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mzeile b{font-family:var(--display);font-size:16px;font-weight:600}
+.mzeile small{font-size:13px;color:var(--dim)}
+.mzeile i{font-style:normal;font-size:24px;color:var(--dim)}
+
+/* ---------- Tagesbonus-Fenster ---------- */
+.bfenster{width:min(420px,100%);text-align:center;align-items:center;border-color:color-mix(in srgb,var(--gold),var(--line) 50%);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--gold),transparent 84%),var(--panel) 50%)}
+.blabel{font:600 11.5px var(--display);text-transform:uppercase;letter-spacing:.12em;color:#1d1300;background:var(--gold);padding:3px 10px;border-radius:999px}
+.bfenster h3{font-size:24px}
+.btrack{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%}
+.btrack li{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 2px;border-radius:10px;border:1px solid var(--line);background:var(--panel2)}
+.btrack span{font-size:10.5px;color:var(--dim);white-space:nowrap}
+.btrack b{font-family:var(--display);font-size:13px;font-weight:500;display:flex;align-items:center;font-variant-numeric:tabular-nums}
+.btrack b .coin{margin-right:2px}
+.btrack svg{width:22px;height:22px}
+.btrack li.ok{opacity:.55}
+.btrack li.ok b::after{content:"✓";margin-left:2px;color:var(--t0)}
+.btrack li.jetzt{border-color:var(--gold);background:color-mix(in srgb,var(--gold),var(--panel2) 82%);box-shadow:0 0 0 2px color-mix(in srgb,var(--gold),transparent 70%)}
+.btrack li.jetzt span{color:var(--gold)}
+.bfenster .row{width:100%}
+@media (max-width:370px){.btrack span{font-size:9.5px}.btrack b{font-size:11.5px}.btrack li{padding:6px 1px}.hstatus button{padding:9px 10px}.reiter{font-size:10.5px}}
+@media (prefers-reduced-motion:reduce){.bonuschip{animation:none}}
+.hkopf{min-width:0;gap:8px}.hkopf .brand{font-size:clamp(20px,6.6vw,30px)}
+@media (max-width:400px){.mzbig{font-size:15px;padding:8px 10px}.hkr{gap:6px}.bonuschip{width:40px;min-height:40px}}

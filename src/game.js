@@ -147,7 +147,7 @@ function showWin(){const n=sterne(),h=istHW();
   if(modus==='kampagne'){const last=li===N-1,nt=!last&&LV[li+1].t>lvl.t?' Als Nächstes beginnt Stufe '+TIERS[LV[li+1].t]+'.':'';p+=last?' Das war die letzte Bahn.':nt;
     knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">'+(last?'Alle Bahnen':'Weiter')+'</button>';}
   else if(modus==='tages')knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">Zum Start</button>'+(konto?'<button type="button" class="breit" id="rangl">Rangliste ansehen</button>':'');
-  else if(modus==='aufgabe'){const last=aufg.i>=aufg.idx.length-1;knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">'+(last?'Zum Start':'Nächste Bahn')+'</button>';}
+  else if(modus==='aufgabe'){const last=aufg.i>=aufg.idx.length-1;knoepfe='<button type="button" id="again">Nochmal</button><button type="button" class="go" id="nx">'+(last?'Zu den Aufgaben':'Nächste Bahn')+'</button>';}
   else{p='Bahn '+lauf.n+' geschafft'+(lauf.n>=st.endl.best&&lauf.n>1?', neuer Rekord!':'.');knoepfe='<button type="button" class="go" id="nx">Nächste Bahn</button>';}
   const extra='<div class="gewinne">'+(gewinn>0?'<span class="plus">+'+zahl(gewinn)+' '+COIN+'</span>':'')+(xpPlus>0?'<span class="xp">+'+xpPlus+' XP</span>':'')+'</div>'+
     (passNeu?'<p class="passneu">Sternenpass Stufe '+passNeu+(passNeu>=PASS.stufen?' – geschafft!':'')+'</p>':'')+
@@ -158,7 +158,7 @@ function showWin(){const n=sterne(),h=istHW();
   if(passSache){const id=passSache;passSache=null;setTimeout(()=>moment({id,titel:'Sternenpass geschafft!',text:'Alle 30 Stufen. Diese Belohnung gibt es nur in diesem Monat.'}),500);}
   $('nx').onclick=weiter;$('ov').hidden=false;$('nx').focus({preventScroll:true});}
 function weiter(){if(modus==='kampagne')li===N-1?showMenu():load(li+1);else if(modus==='tages')zeige('home');
-  else if(modus==='aufgabe'){if(aufg.i>=aufg.idx.length-1)zeige('home');else startAufgabe(aufg.id,aufg.i+1);}else endlosWeiter();}
+  else if(modus==='aufgabe'){if(aufg.i>=aufg.idx.length-1)zeige('aufg','heute');else startAufgabe(aufg.id,aufg.i+1);}else endlosWeiter();}
 function laufEnde(){const n=lauf.n,rek=n>=st.endl.best&&n>0;lauf=null;
   $('card').innerHTML='<h2 class="big">Lauf vorbei</h2><p>'+(n===1?'Eine Bahn':n+' Bahnen')+' geschafft.'+(rek?' Neuer Rekord!':' Rekord: '+st.endl.best+'.')+'</p><div class="row"><button type="button" id="again">Zum Start</button><button type="button" class="go" id="nx">Neuer Lauf</button></div>';
   $('again').onclick=()=>zeige('home');$('nx').onclick=()=>{bahn=null;startEndlos();};$('ov').hidden=false;$('nx').focus({preventScroll:true});}
@@ -178,11 +178,11 @@ function renderMenu(){let h='<div class="mhead"><h2>Bahnen</h2><span>★ '+total
 function closeMenu(){if(lauf&&lauf.warten)return;$('ov').hidden=true;if(zust==='won'||zust==='sink')modus==='kampagne'?load(li):weiter();}
 // „Neu“ holt die Kugel an den Start zurück (auch mitten im Flug); die Schläge bleiben gezählt.
 $('reset').onclick=()=>{if(!$('ov').hidden||!lvl)return;if(zust==='fly'){zust='aim';home();say(modus==='endlos'&&shots>=limit()?'':'Kugel zurück');if(modus==='endlos'&&shots>=limit())laufEnde();}else if(zust==='aim'){home();drag=null;}};
-$('menu').onclick=()=>$('ov').hidden||!$('card').querySelector('.tabs')?showMenu():closeMenu();$('tip').onclick=toggleHint;$('start').onclick=()=>zeige('home');
+$('menu').onclick=()=>$('ov').hidden||!$('card').querySelector('.tabs')?showMenu():closeMenu();$('tip').onclick=toggleHint;$('start').onclick=()=>zeige(letzterReiter);
 addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey||!spielSichtbar()||/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName))return;const k=e.key.toLowerCase();
   if(k==='t'||k==='h')toggleHint();else if(k==='r')$('reset').click();
   else if(k==='m'){if($('ov').hidden)showMenu();else if($('card').querySelector('.tabs'))closeMenu();}
-  else if(k==='escape'){if(!$('ov').hidden&&$('card').querySelector('.tabs'))closeMenu();else zeige('home');}
+  else if(k==='escape'){if(!$('ov').hidden&&$('card').querySelector('.tabs'))closeMenu();else zeige(letzterReiter);}
   else if(k==='enter'&&zust==='won'&&!$('ov').hidden&&document.activeElement?.id!=='again'){e.preventDefault();weiter();}});
 
 // ---------- Zeichnen ----------
@@ -225,7 +225,7 @@ function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;anim+=dt;
   else if(homeSichtbar())homeFrame(dt);
   else if(ansicht==='inv')invFrame();
   else if(ansicht==='shop')shopFrame(dt);
-  else if(ansicht==='pass')passFrame();
+  else if(ansicht==='aufg'){ticken(dt,$('sinhalt'));if(aufgTab==='pass')passFrame();}
   if(!$('gross').hidden)grossFrame();
   if(!$('moment').hidden)momentFrame(dt);
   requestAnimationFrame(frame);}

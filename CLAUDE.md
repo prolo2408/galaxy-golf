@@ -16,7 +16,7 @@ Gilt für jede Sitzung, auch für die wöchentliche geplante Aufgabe. Der Besitz
 
 Der Shop wechselt von selbst nach Datum, für alle gleich: jeden Tag 4 Sachen unter 450 Münzen (eine 25 % günstiger), jeden Montag 2 Highlights ab 450 Münzen. Wie ein gemischter Stapel: jede Sache kommt einmal pro Runde dran, dann wird neu gemischt. Was fehlt, kommt also von selbst wieder. Eine neue Sache steht ab ihrem `neu`-Datum 14 Tage unter **Neu** und kommt danach in den Wechsel.
 
-## Neue Skins (alle drei Wochen zwei Stück)
+## Neue Skins (jede Woche zwei Stück)
 
 Zwei kaufbare Sachen in `ITEMS` mit Preis passend zur Seltenheit: Gewöhnlich ≤ 200, Selten ≤ 400, Episch ≤ 700, Legendär darüber. Ab 450 Münzen ist es später ein Wochen-Highlight, darunter eine tägliche Sache. Abwechselnd die Fächer bedienen (Kugel, Spur, Loch, Look).
 - `neu:'<Datum des nächsten Montags>'`, zum Beispiel `{id:'k-nordlicht',n:'Nordlicht',p:350,neu:'2026-11-23'}`. Ab diesem Tag stehen sie 14 Tage unter Neu.

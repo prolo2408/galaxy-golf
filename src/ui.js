@@ -22,25 +22,39 @@ addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'
 setInterval(()=>{if(document.visibilityState==='visible')sync();},120000);
 
 // ---------- Navigation ----------
-let ansicht='spiel',stapel=[];
+// Untere Leiste mit fünf Reitern. Rangliste, Konto und Admin sind Unterseiten von „Mehr“ und haben „Zurück“.
+const REITER=['home','aufg','shop','inv','mehr'],ELTERN={rang:'mehr',konto:'mehr',admin:'mehr'};
+const TITEL={aufg:'Aufgaben',inv:'Inventar',shop:'Shop',mehr:'Mehr',rang:'Rangliste',konto:'Konto',admin:'Admin'};
+let ansicht='spiel',stapel=[],letzterReiter='home';
 const spielSichtbar=()=>ansicht==='spiel',homeSichtbar=()=>ansicht==='home';
-// Seiten merken sich, woher man kam: „Zurück“ führt genau dorthin, vom Startbildschirm aus immer zum Start
-function zeige(a,arg,zurueck){const vor=ansicht;if(vor==='admin'&&a!=='admin')adminAbmelden();ansicht=a;
-  $('home').hidden=a!=='home';$('scr').hidden=a==='spiel'||a==='home';
-  if(a==='spiel'||a==='home'){stapel=[];if(a==='home')renderHome();else if(lvl){ui();size();}return;}
-  if(!zurueck&&vor!==a&&vor!=='home'&&vor!=='spiel')stapel.push(vor);
-  const T={inv:'Inventar',shop:'Shop',pass:'Sternenpass',rang:'Rangliste',einst:'Einstellungen',konto:'Konto',admin:'Admin'};$('stitel').textContent=T[a];
-  $('sinhalt').scrollTop=0;({inv:renderInv,shop:renderShop,pass:renderPass,rang:renderRang,einst:renderEinst,konto:renderKonto,admin:renderAdmin})[a](arg);}
-$('zur').onclick=()=>zeige(stapel.pop()||'home',undefined,true);
+function zeige(a,arg,zurueck){if(a==='pass'){a='aufg';arg='pass';}if(a==='einst')a='mehr';
+  const vor=ansicht;if(vor==='admin'&&a!=='admin')adminAbmelden();ansicht=a;const reiter=REITER.includes(a);if(reiter)letzterReiter=a;
+  $('home').hidden=a!=='home';$('scr').hidden=a==='spiel'||a==='home';$('leiste').hidden=a==='spiel';
+  if(reiter)stapel=[];else if(!zurueck&&vor!==a&&vor!=='spiel')stapel.push(vor);
+  if(a==='spiel'){if(lvl){ui();size();}return;}
+  if(a==='home'){renderHome();return leisteZeigen();}
+  $('zur').hidden=reiter;$('stitel').textContent=TITEL[a];
+  $('sinhalt').scrollTop=0;({aufg:renderAufg,inv:renderInv,shop:renderShop,mehr:renderEinst,rang:renderRang,konto:renderKonto,admin:renderAdmin})[a](arg);leisteZeigen();}
+$('zur').onclick=()=>zeige(stapel.pop()||ELTERN[ansicht]||'home',undefined,true);
+function lokal(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lokalSetzen(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+// Punkte an den Reitern: Aufgaben (Bonus offen oder heute noch nicht reingeschaut), Shop (Event offen oder heute noch nicht reingeschaut), Inventar (neue Sachen)
+function leisteZeigen(){const d=datum(),aktiv=REITER.includes(ansicht)?ansicht:ELTERN[ansicht]||'home',
+    punkt={aufg:!st.login[d]||lokal('gg-aufg-tag')!==d,shop:offeneEvents().length>0||lokal('gg-shop-tag')!==d,inv:ungesehen().length>0};
+  document.querySelectorAll('#leiste [data-reiter]').forEach(b=>{const r=b.dataset.reiter;if(r===aktiv)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+    const pt=b.querySelector('.punkt');if(pt)pt.hidden=!punkt[r];});}
+document.querySelectorAll('#leiste [data-reiter]').forEach(b=>b.onclick=()=>{const r=b.dataset.reiter;if(r==='shop')zeige('shop',offeneEvents().length?'ev':'heute');else zeige(r);});
 function muenzAnzeige(){$('smz').innerHTML=COIN+zahl(muenzen(st));}
-function aktualisieren(){muenzAnzeige();if(ansicht==='home')renderHome();else if(ansicht==='einst'&&!$('e-code')?.value&&document.activeElement?.tagName!=='INPUT')renderEinst();else if(ansicht==='shop')renderShop();else if(ansicht==='inv')renderInv();
-  else if(ansicht==='pass')renderPass();if(grossId&&!$('gross').hidden)renderGross();}
+function aktualisieren(){muenzAnzeige();if(ansicht==='home')renderHome();else if(ansicht==='mehr'&&!$('e-code')?.value&&document.activeElement?.tagName!=='INPUT')renderEinst();else if(ansicht==='shop')renderShop();else if(ansicht==='inv')renderInv();
+  else if(ansicht==='aufg')renderAufg();if(grossId&&!$('gross').hidden)renderGross();if(ansicht!=='spiel')leisteZeigen();}
 let toastT;function toast(s){const t=$('toast');t.textContent=s;t.hidden=false;t.classList.add('an');clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('an');},3200);}
 function fragen(titel,text,ja,fn,bild){const d=$('dialog');d.innerHTML='<div class="dkarte" role="dialog" aria-modal="true" aria-labelledby="dtitel">'+(bild?'<canvas class="dbild" width="360" height="240" aria-hidden="true"></canvas>':'')+'<h3 id="dtitel">'+titel+'</h3><p>'+text+'</p><div class="row"><button type="button" id="dnein">Abbrechen</button><button type="button" class="go" id="dja">'+ja+'</button></div></div>';
   if(bild)vorschau(d.querySelector('canvas'),bild);d.hidden=false;$('dnein').onclick=()=>d.hidden=true;$('dja').onclick=()=>{d.hidden=true;fn();};$('dja').focus();}
 
 // ---------- Startbildschirm ----------
-let hinweis=null,evSpaeter=false,aufgTab='heute';
+// Nur das Wichtigste, ohne Scrollen: Szene, Weiterspielen, Tagesbahn und Endlos, darunter eine Zeile zu Aufgaben und Sternenpass.
+const GESCHENK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="1.5"/><path d="M3 7.5h18v3H3zM12 7.5V20M12 7.5c-1.6-3.6-5.6-3.8-5.6-1.6 0 1.4 2.5 1.6 5.6 1.6zM12 7.5c1.6-3.6 5.6-3.8 5.6-1.6 0 1.4-2.5 1.6-5.6 1.6z"/></svg>';
+const TRUHE_BILD='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="18" height="11" rx="2" fill="#b46cff"/><path d="M3 11.5C3 7 6.5 5 12 5s9 2 9 6.5z" fill="#7a3fd0"/><rect x="10.3" y="10" width="3.4" height="5" rx="1" fill="#ffd76a"/></svg>';
 // Weiterspielen: die aktuelle Bahn, oder wenn sie geschafft ist, die erste offene Bahn
 function weiterIndex(){const c=Math.min(st.cur,st.un-1);if(!st.best[c+1])return c;for(let i=0;i<st.un;i++)if(!st.best[i+1])return i;return c;}
 function weiterText(){const i=weiterIndex();return'Bahn '+(i+1)+' · '+TIERS[LV[i].t];}
@@ -49,58 +63,70 @@ function weiterSpielen(){zeige('spiel');if(modus!=='kampagne'||!bahn||zust==='wo
 function los(id){const A=AUFG[id];if(A.b){zeige('spiel');if(!startAufgabe(id,0))weiterSpielen();}
   else if(A.los==='tages'){zeige('spiel');if(modus!=='tages'||tagKey!==datum())startTages();}
   else if(A.los==='endlos'){zeige('spiel');if(!lauf)startEndlos();}else weiterSpielen();}
-function bonusKarte(){const d=datum();if(st.login[d])return'';const pos=seriePos(serieLaenge(st,plusTage(d,-1))+1);
-  let dots='';for(let k=1;k<=7;k++)dots+='<i class="'+(k<pos?'ok':k===pos?'jetzt':'')+(k===7?' truhe':'')+'"></i>';
-  return'<div class="bonus"><div class="bkopf"><b>Tagesbonus</b><span>Tag '+pos+' von 7'+(pos<7?' · an Tag 7 wartet eine Truhe':'')+'</span></div><div class="bdots" aria-hidden="true">'+dots+'</div>'+
-    '<button type="button" class="go" id="h-bonus">'+(pos===7?'Truhe öffnen':'+'+SERIE[pos-1]+' '+COIN+'abholen')+'</button></div>';}
-function passKarte(){const p=passJetzt(),laeuft=p.mon>=PASS.ab,mon=laeuft?p.mon:PASS.ab,P=PAESSE[mon],voll=p.stufe>=PASS.stufen,ende=monatTage(mon).slice(-1)[0];
-  return'<button type="button" class="passk" id="h-pass">'+(P?'<canvas class="pkbild" width="160" height="128" data-pv="'+P.item+'" aria-hidden="true"></canvas>':'<span class="pkbild pkmz" aria-hidden="true">'+COIN+'</span>')+
-    '<span class="pktext"><b>'+esc(passName(mon))+'</b><small>'+(!laeuft?(plusTage(datum(),1)===mon+'-01'?'Startet morgen':'Startet am '+fd(mon+'-01')):voll?'Alle 30 Stufen geschafft':'Stufe '+p.stufe+' von 30 · noch '+restText(ende))+'</small>'+
-    '<span class="pkbar"><i style="width:'+(voll?100:laeuft?Math.round((p.xp-p.stufe*PASS.xp)/PASS.xp*100):0)+'%"></i></span></span></button>';}
-function aufgabenKarte(){const d=datum(),a=st.auf[d]||{},w=wocheVon(d),heute=aufgTab==='heute';
-  const zeile=(ok,t,klein,v,z,knopf)=>'<li class="'+(ok?'ok':'')+'"><span class="chk" aria-hidden="true"></span><span class="at"><span class="att">'+esc(t)+(ok?'<span class="sr"> – geschafft</span>':'')+'</span><small>'+klein+'</small>'+
-    (z>1&&!ok?'<span class="abar" aria-hidden="true"><i style="width:'+Math.round(v/z*100)+'%"></i></span>':'')+'</span>'+(knopf||'')+'</li>';
-  let h='<section class="aufg" aria-label="Aufgaben"><div class="atabs" role="tablist"><button type="button" role="tab" data-at="heute" aria-selected="'+heute+'">Heute</button><button type="button" role="tab" data-at="woche" aria-selected="'+!heute+'">Woche</button></div><ul>';
-  if(heute){h+=aufgabenFuer(d).map(id=>{const A=AUFG[id],v=Math.min(A.z,a[id]|0),ok=v>=A.z;
-      return zeile(ok,A.t,(A.z>1?v+' von '+A.z+' · ':'')+'+'+A.m+' '+COIN+' · +40 XP',v,A.z,ok?'':'<button type="button" class="los" data-los="'+id+'">Spielen</button>');}).join('');
-    h+='</ul><p class="aufghin">Alle drei geschafft: +30 XP extra. Neue in <span data-bis-ms="'+mitternacht()+'">'+restText(mitternacht())+'</span>.</p>';}
-  else if(w<WOCHE_AB)h+='</ul><p class="aufghin">Die ersten Wochen-Herausforderungen starten am Montag, '+fd(WOCHE_AB)+'.</p>';
-  else{const s=wochenStand(st,w);h+=wochenAufgaben(w).map(id=>{const A=WAUFG[id],v=Math.min(A.z,s[id]),ok=v>=A.z;return zeile(ok,A.t,v+' von '+A.z+' · +'+WOCHE_MZ+' '+COIN+' · +'+WOCHE_XP+' XP',v,A.z);}).join('');
-    h+='</ul><p class="aufghin">Neue Herausforderungen in <span data-bis="'+plusTage(w,6)+'">'+restText(plusTage(w,6))+'</span>.</p>';}
-  return h+'</section>';}
-function renderHome(){const d=datum(),tg=st.tag[d],offen=offeneEvents();
-  let h='<div class="hkopf"><h1 class="brand">Galaxy <span>Golf</span></h1><button type="button" class="mzbig" id="h-mz" aria-label="Münzen, zum Shop">'+COIN+zahl(muenzen(st))+'</button></div>';
+function renderHome(){const d=datum(),tg=st.tag[d],ids=aufgabenFuer(d),a=st.auf[d]||{},fertigN=ids.filter(id=>(a[id]|0)>=AUFG[id].z).length,p=passJetzt(),laeuft=p.mon>=PASS.ab,voll=p.stufe>=PASS.stufen;
+  let h='<div class="hkopf"><h1 class="brand">Galaxy <span>Golf</span></h1><div class="hkr">'+(st.login[d]?'':'<button type="button" class="bonuschip" id="h-bonus" aria-label="Tagesbonus abholen">'+GESCHENK+'<i class="punkt" aria-hidden="true"></i></button>')+
+    '<button type="button" class="mzbig" id="h-mz" aria-label="Münzen, zum Shop">'+COIN+zahl(muenzen(st))+'</button></div></div>';
   h+='<p class="hallo">'+(konto?'Hallo '+esc(konto.name)+' · '+(syncFehler?'nicht gespeichert: '+esc(syncFehler):syncZeit?'gespeichert':'wird abgeglichen'):server?'Spielstand nur auf diesem Gerät':'Spielstand auf diesem Gerät')+'</p>';
-  h+=bonusKarte();
-  if(hinweis)h+='<div class="notiz"><b>'+esc(hinweis.t)+'</b><span>'+esc(hinweis.p)+'</span><button type="button" id="h-ok">Alles klar</button></div>';
-  else if(offen.length&&!evSpaeter){const e=offen[0],rest=e.items.filter(id=>!st.own[id]);const nm=rest.map(id=>(ITEM[id].f==='o'?'den Look ':'')+ITEM[id].n),liste=nm.length>1?nm.slice(0,-1).join(', ')+' und '+nm[nm.length-1]:nm[0];
-    h+='<div class="notiz evnotiz" style="--ev:'+(LOOKS[e.look]||LOOKS['o-klassisch']).css.acc+'"><b>'+esc(e.n)+' läuft</b><span>Noch '+restText(e.bis)+'. Im Shop warten '+esc(liste)+', jeweils für 0 Münzen. Was du abholst, bleibt für immer.</span><div class="row"><button type="button" id="h-evsp">Später</button><button type="button" class="go" id="h-evshop">Zum Event</button></div></div>';}
-  else if(!konto&&server&&!localStorage.getItem('gg-willkommen'))h+='<div class="notiz"><b>Spielstand sichern</b><span>Mit Name und PIN liegt dein Fortschritt auf dem Server, du kannst ihn auf jedes Handy holen, Geschenk-Codes einlösen und in der Rangliste mitmachen.</span><div class="row"><button type="button" id="h-spaeter">Später</button><button type="button" class="go" id="h-konto">Konto anlegen</button></div></div>';
   h+='<button type="button" class="go gross" id="h-weiter">Weiterspielen<small>'+weiterText()+'</small></button>';
   h+='<div class="hrow"><button type="button" id="h-tages">Tagesbahn<small>'+(tg?'<span class="st">'+'★'.repeat(tg.st)+'<i>'+'★'.repeat(3-tg.st)+'</i></span>':'neu heute')+'</small></button><button type="button" id="h-endlos">Endlos<small>Rekord '+st.endl.best+'</small></button></div>';
-  h+=passKarte()+aufgabenKarte();
-  h+='<nav class="hnav"><button type="button" id="h-inv">Inventar'+(ungesehen().length?'<i class="punkt" aria-hidden="true"></i><span class="sr"> (neu)</span>':'')+'</button><button type="button" id="h-shop">Shop'+(offen.length?'<i class="punkt" aria-hidden="true"></i><span class="sr"> (Event)</span>':'')+'</button><button type="button" id="h-rang">Rangliste</button><button type="button" id="h-einst">Optionen</button></nav>';
-  $('hinhalt').innerHTML=h;$('hinhalt').querySelectorAll('[data-pv]').forEach(c=>vorschau(c,c.dataset.pv));
+  h+='<div class="hstatus"><button type="button" id="h-aufg"><span>Aufgaben</span><b>'+fertigN+'<small> von 3</small></b><span class="hbar" aria-hidden="true"><i style="width:'+Math.round(fertigN/3*100)+'%"></i></span></button>'+
+    '<button type="button" id="h-pass" class="hpass"><span>Sternenpass</span><b>'+(!laeuft?'ab '+fdk(PASS.ab+'-01'):voll?'Geschafft':'Stufe '+p.stufe)+'</b><span class="hbar" aria-hidden="true"><i style="width:'+(voll?100:laeuft?Math.round((p.xp-p.stufe*PASS.xp)/PASS.xp*100):0)+'%"></i></span></button></div>';
+  $('hinhalt').innerHTML=h;
   $('h-weiter').onclick=weiterSpielen;
   $('h-tages').onclick=()=>{zeige('spiel');if(modus!=='tages'||tagKey!==datum())startTages();};
   $('h-endlos').onclick=()=>{zeige('spiel');if(!lauf)startEndlos();};
-  $('h-shop').onclick=$('h-mz').onclick=()=>zeige('shop',offen.length?'ev':'heute');$('h-inv').onclick=()=>zeige('inv');$('h-einst').onclick=()=>zeige('einst');$('h-rang').onclick=()=>zeige('rang');
-  $('h-pass').onclick=()=>zeige('pass');
-  if($('h-bonus'))$('h-bonus').onclick=bonusHolen;
-  $('hinhalt').querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>{aufgTab=b.dataset.at;renderHome();});
-  $('hinhalt').querySelectorAll('[data-los]').forEach(b=>b.onclick=()=>los(b.dataset.los));
-  if($('h-evshop'))$('h-evshop').onclick=()=>zeige('shop','ev');if($('h-evsp'))$('h-evsp').onclick=()=>{evSpaeter=true;renderHome();};
-  if($('h-ok'))$('h-ok').onclick=()=>{hinweis=null;renderHome();};
-  if($('h-spaeter'))$('h-spaeter').onclick=()=>{try{localStorage.setItem('gg-willkommen','1');}catch(e){}renderHome();};
-  if($('h-konto'))$('h-konto').onclick=()=>zeige('konto');
+  $('h-mz').onclick=()=>zeige('shop',offeneEvents().length?'ev':'heute');$('h-aufg').onclick=()=>zeige('aufg','heute');$('h-pass').onclick=()=>zeige('aufg','pass');
+  if($('h-bonus'))$('h-bonus').onclick=()=>bonusFenster(true);
   if(!lauf)vorratBauen();}
+
+// ---------- Aufgaben: Heute, Woche, Sternenpass ----------
+let aufgTab='heute';
+function bonusZeile(){const d=datum();
+  if(!st.login[d]){const pos=seriePos(serieLaenge(st,plusTage(d,-1))+1);let dots='';for(let k=1;k<=7;k++)dots+='<i class="'+(k<pos?'ok':k===pos?'jetzt':'')+(k===7?' truhe':'')+'"></i>';
+    return'<div class="bonus"><div class="bkopf"><b>Tagesbonus</b><span>Tag '+pos+' von 7'+(pos<7?' · an Tag 7 wartet eine Truhe':'')+'</span></div><div class="bdots" aria-hidden="true">'+dots+'</div>'+
+      '<button type="button" class="go" id="a-bonus">'+(pos===7?'Truhe öffnen':'+'+SERIE[pos-1]+' '+COIN+'abholen')+'</button></div>';}
+  const l=serieLaenge(st,d),morgen=seriePos(l+1);
+  return'<p class="bonusok"><span class="chk" aria-hidden="true"></span><span>Tagesbonus abgeholt · '+l+(l===1?' Tag':' Tage')+' am Stück · morgen '+(morgen===7?'die Truhe':'+'+SERIE[morgen-1]+' '+COIN)+'</span></p>';}
+function aufgZeile(ok,t,klein,v,z,knopf){return'<li class="'+(ok?'ok':'')+'"><span class="chk" aria-hidden="true"></span><span class="at"><span class="att">'+esc(t)+(ok?'<span class="sr"> – geschafft</span>':'')+'</span><small>'+klein+'</small>'+
+  (z>1&&!ok?'<span class="abar" aria-hidden="true"><i style="width:'+Math.round(v/z*100)+'%"></i></span>':'')+'</span>'+(knopf||'')+'</li>';}
+function renderAufg(tab){if(tab)aufgTab=tab;const d=datum(),S=$('sinhalt'),a=st.auf[d]||{},w=wocheVon(d);lokalSetzen('gg-aufg-tag',d);
+  let h='<div class="stabs" role="tablist">'+[['heute','Heute'],['woche','Woche'],['pass','Sternenpass']].map(([k,n])=>'<button type="button" role="tab" data-at="'+k+'" aria-selected="'+(aufgTab===k)+'">'+n+'</button>').join('')+'</div>';
+  if(aufgTab==='heute'){h+=bonusZeile()+'<section class="aufg" aria-label="Tagesaufgaben"><ul>'+aufgabenFuer(d).map(id=>{const A=AUFG[id],v=Math.min(A.z,a[id]|0),ok=v>=A.z;
+      return aufgZeile(ok,A.t,(A.z>1?v+' von '+A.z+' · ':'')+'+'+A.m+' '+COIN+' · +40 XP',v,A.z,ok?'':'<button type="button" class="los" data-los="'+id+'">Spielen</button>');}).join('')+
+      '</ul><p class="aufghin">Alle drei geschafft: +30 XP extra. Neue in <span data-bis-ms="'+mitternacht()+'">'+restText(mitternacht())+'</span>.</p></section>';}
+  else if(aufgTab==='woche'){h+='<section class="aufg" aria-label="Wochen-Herausforderungen"><ul>';
+    if(w<WOCHE_AB)h+='</ul><p class="aufghin">Die ersten Wochen-Herausforderungen starten am Montag, '+fd(WOCHE_AB)+'.</p>';
+    else{const s=wochenStand(st,w);h+=wochenAufgaben(w).map(id=>{const A=WAUFG[id],v=Math.min(A.z,s[id]),ok=v>=A.z;return aufgZeile(ok,A.t,v+' von '+A.z+' · +'+WOCHE_MZ+' '+COIN+' · +'+WOCHE_XP+' XP',v,A.z);}).join('')+
+      '</ul><p class="aufghin">Neue Herausforderungen in <span data-bis="'+plusTage(w,6)+'">'+restText(plusTage(w,6))+'</span>.</p>';}
+    h+='</section>';}
+  else h+=passInhalt();
+  S.innerHTML=h;muenzAnzeige();passSz=null;
+  S.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>{aufgTab=b.dataset.at;renderAufg();S.scrollTop=0;});
+  S.querySelectorAll('[data-los]').forEach(b=>b.onclick=()=>los(b.dataset.los));
+  if($('a-bonus'))$('a-bonus').onclick=bonusHolen;
+  S.querySelectorAll('[data-pv]').forEach(c=>vorschau(c,c.dataset.pv));
+  if(aufgTab==='pass'){const j=S.querySelector('.stufe.jetzt');if(j)j.scrollIntoView({block:'nearest'});}
+  leisteZeigen();}
+
+// ---------- Tagesbonus ----------
+// Springt einmal am Tag beim Öffnen auf. „Später“ lässt ihn für heute in Ruhe, abholen geht dann im Reiter Aufgaben oder über das Geschenk oben.
+function bonusFenster(gewollt){const d=datum();if(st.login[d]||!$('dialog').hidden||!$('moment').hidden||!$('gross').hidden||ansicht==='spiel')return;
+  if(!gewollt&&lokal('gg-bonus-spaeter')===d)return;
+  const pos=seriePos(serieLaenge(st,plusTage(d,-1))+1);let t='';
+  for(let k=1;k<=7;k++)t+='<li class="'+(k<pos?'ok':k===pos?'jetzt':'')+(k===7?' truhe':'')+'"><span>Tag '+k+'</span><b>'+(k===7?TRUHE_BILD:COIN+SERIE[k-1])+'</b></li>';
+  $('dialog').innerHTML='<div class="dkarte bfenster" role="dialog" aria-modal="true" aria-labelledby="b-titel"><span class="blabel">Tagesbonus</span><h3 id="b-titel">'+(pos===7?'Tag 7: die Truhe!':'Tag '+pos+' von 7')+'</h3><ol class="btrack">'+t+'</ol>'+
+    '<p>'+(pos===7?'Sieben Tage am Stück. In der Truhe steckt eine seltene oder epische Sache, die du noch nicht hast.':'Schau jeden Tag vorbei, dann wird der Bonus größer. An Tag 7 öffnest du eine Truhe. Lässt du einen Tag aus, geht es bei Tag 1 weiter.')+'</p>'+
+    '<div class="row"><button type="button" id="b-spaeter">Später</button><button type="button" class="go" id="b-holen">'+(pos===7?'Truhe öffnen':'+'+SERIE[pos-1]+' '+COIN+'abholen')+'</button></div></div>';
+  $('dialog').hidden=false;
+  $('b-spaeter').onclick=()=>{lokalSetzen('gg-bonus-spaeter',d);$('dialog').hidden=true;};
+  $('b-holen').onclick=()=>{$('dialog').hidden=true;bonusHolen();};$('b-holen').focus({preventScroll:true});}
 // Tagesbonus abholen: Münzen, an Tag 7 eine Truhe mit einer seltenen oder epischen Sache, die man noch nicht hat
 function bonusHolen(){const d=datum();if(st.login[d])return;const pos=seriePos(serieLaenge(st,plusTage(d,-1))+1);st.login[d]=1;
   if(pos===7){const frei=ITEMS.filter(i=>truheMoeglich(i.id)&&!st.own[i.id]);
     if(frei.length){const i=frei[Math.floor(Math.random()*frei.length)];st.own[i.id]={w:'serie',d};moment({id:i.id,titel:'Truhe geöffnet!',text:'Sieben Tage am Stück. Morgen beginnt die nächste Serie.'});}
     else moment({muenzen:SERIE_TRUHE_MZ,titel:'Truhe geöffnet!',text:'Aus der Truhe hast du schon alles. Dafür gibt es Münzen.'});}
   else moment({muenzen:SERIE[pos-1],titel:'Tag '+pos+' von 7',text:pos===6?'Morgen öffnest du die Truhe mit einer seltenen Sache.':'Komm morgen wieder, dann gibt es mehr.'});
-  const ps=passPruefen();persist();sync();renderHome();
+  const ps=passPruefen();persist();sync();aktualisieren();
   if(ps)momentDanach={id:ps,titel:'Sternenpass geschafft!',text:'Alle 30 Stufen. Diese Belohnung gibt es nur in diesem Monat.'};}
 let momentDanach=null;
 // Countdowns auf der sichtbaren Seite jede Sekunde nachführen
@@ -198,7 +224,7 @@ function eventSeite(){const aktiv=EVENTS.filter(e=>imEvent(e,datum()));let h='';
   const meine=EVENTS.filter(e=>st.own['e-'+e.id]).sort((a,b)=>st.own['e-'+a.id].d.localeCompare(st.own['e-'+b.id].d));
   if(meine.length)h+='<h3 class="sub2">Deine Abzeichen</h3><div class="abzliste">'+meine.map(e=>'<div class="abz"><canvas width="120" height="96" data-abz="'+e.id+'" aria-hidden="true"></canvas><div><b>'+esc(e.n)+'</b><small>erhalten am '+fd(st.own['e-'+e.id].d)+'</small></div></div>').join('')+'</div>';
   return h;}
-function renderShop(tab){if(tab)shopTab=tab;const S=$('sinhalt'),offen=offeneEvents().length;
+function renderShop(tab){if(tab)shopTab=tab;const S=$('sinhalt'),offen=offeneEvents().length;lokalSetzen('gg-shop-tag',datum());
   let h='<div class="stabs" role="tablist"><button type="button" role="tab" data-f="heute" aria-selected="'+(shopTab==='heute')+'">Shop</button><button type="button" role="tab" data-f="ev" aria-selected="'+(shopTab==='ev')+'">Event'+(offen?'<i class="punkt" aria-hidden="true"></i><span class="sr"> (neu)</span>':'')+'</button></div>';
   h+=shopTab==='ev'?eventSeite():shopHeute();
   S.innerHTML=h;muenzAnzeige();shopSz={};
@@ -299,21 +325,20 @@ function renderInv(f){if(f)invFach=f;const d=datum(),alle=ITEMS.filter(i=>i.f===
   $('sinhalt').querySelectorAll('.slot').forEach(b=>{vorschau(b.querySelector('canvas'),st.eq[b.dataset.slot]);b.onclick=()=>{invFach=b.dataset.slot;renderInv();};});
   $('sinhalt').querySelectorAll('.item[data-id]').forEach(b=>{vorschau(b.querySelector('canvas'),b.dataset.id);b.onclick=()=>{const id=b.dataset.id;if(st.eq[invFach]!==id){anlegen(id);toast(ITEM[id].n+' angelegt.');renderInv();}else oeffneGross(id);};});
   if($('inv-shop'))$('inv-shop').onclick=()=>zeige('shop','heute');
-  gesehenMerken(neu);}
+  gesehenMerken(neu);if(ansicht==='inv')leisteZeigen();}
 function invFrame(){const c=$('invcv');if(c)invSz=szene(c,st.eq,invSz);}
 
 // ---------- Sternenpass ----------
 let passSz=null;
-function renderPass(){const p=passJetzt(),laeuft=p.mon>=PASS.ab,mon=laeuft?p.mon:PASS.ab,P=PAESSE[mon],stufe=laeuft?p.stufe:0,rest=laeuft?p.xp-stufe*PASS.xp:0,ende=monatTage(mon).slice(-1)[0],voll=stufe>=PASS.stufen;
-  let h='<section class="passkopf">'+(P?'<canvas id="pass-cv" aria-hidden="true"></canvas>':'')+'<div class="pkinfo"><span class="evlabel">'+(laeuft?'Läuft · noch '+restText(ende):'Startet am '+fd(mon+'-01'))+'</span><h3>'+esc(passName(mon))+'</h3>'+
+function passInhalt(){const p=passJetzt(),laeuft=p.mon>=PASS.ab,mon=laeuft?p.mon:PASS.ab,P=PAESSE[mon],stufe=laeuft?p.stufe:0,rest=laeuft?p.xp-stufe*PASS.xp:0,ende=monatTage(mon).slice(-1)[0],voll=stufe>=PASS.stufen;
+  let h='<section class="passkopf">'+(P?'<canvas id="pass-cv" aria-hidden="true"></canvas>':'')+'<div class="pkinfo"><span class="evlabel">'+(laeuft?'Läuft · noch '+restText(ende):plusTage(datum(),1)===mon+'-01'?'Startet morgen':'Startet am '+fd(mon+'-01'))+'</span><h3>'+esc(passName(mon))+'</h3>'+
     '<p>'+(P?'Auf Stufe 30 wartet <b>'+esc(ITEM[P.item].n)+'</b>. Es gibt sie nur in diesem Monat.':'Auf Stufe 30 warten '+zahl(passMz(30)+PASS.ohneSache)+' Münzen.')+' Auf jeder Stufe gibt es Münzen.</p></div></section>';
   h+='<div class="pfort"><b>Stufe '+stufe+'<small> von '+PASS.stufen+'</small></b><span>'+(voll?'Geschafft':rest+' / '+PASS.xp+' XP')+'</span></div><div class="pbalken" role="progressbar" aria-valuemin="0" aria-valuemax="'+PASS.stufen+'" aria-valuenow="'+stufe+'"><i style="width:'+(voll?100:Math.round(rest/PASS.xp*100))+'%"></i></div>';
   h+='<div class="stufen">'+Array.from({length:PASS.stufen},(_,k)=>{const n=k+1,ok=n<=stufe,jetzt=n===stufe+1&&laeuft;
     return'<div class="stufe'+(ok?' ok':'')+(jetzt?' jetzt':'')+(n===PASS.stufen?' ende':n%5===0?' fuenf':'')+'"><span>'+n+'</span>'+(n===PASS.stufen&&P?'<canvas width="120" height="96" data-pv="'+P.item+'" aria-label="'+esc(ITEM[P.item].n)+'"></canvas>':'<b>'+COIN+(n===PASS.stufen&&!P?passMz(n)+PASS.ohneSache:passMz(n))+'</b>')+'</div>';}).join('')+'</div>';
   h+='<section class="grp"><h3>So sammelst du XP</h3><ul class="xpliste"><li><span>Jede geschaffte Bahn</span><b>5 XP + 5 je Stern</b></li><li><span>Bahnen pro Tag höchstens</span><b>250 XP</b></li><li><span>Tagesaufgabe</span><b>40 XP</b></li><li><span>Alle drei Tagesaufgaben</span><b>+30 XP</b></li><li><span>Tagesbonus</span><b>20 XP</b></li><li><span>Wochen-Herausforderung</span><b>100 XP</b></li></ul>'+
     '<p>Münzen bekommst du, sobald du eine Stufe erreichst. Jeden Monat beginnt ein neuer Pass bei Stufe 0, mit einer neuen Belohnung auf Stufe 30.</p></section>';
-  $('sinhalt').innerHTML=h;muenzAnzeige();passSz=null;$('sinhalt').querySelectorAll('[data-pv]').forEach(c=>vorschau(c,c.dataset.pv));
-  const j=$('sinhalt').querySelector('.stufe.jetzt');if(j)j.scrollIntoView({block:'nearest'});}
+  return h;}
 function passFrame(){const c=$('pass-cv'),P=PAESSE[datum().slice(0,7)>=PASS.ab?datum().slice(0,7):PASS.ab];if(c&&P)passSz=buehne(c,P.item,passSz);}
 
 // ---------- Rangliste ----------
@@ -342,17 +367,19 @@ function profil(){const evs=EVENTS.filter(e=>st.own['e-'+e.id]).sort((a,b)=>st.o
     '<dl class="werte"><div><dt>Sterne</dt><dd>'+zahl(totalStars())+' <small>von '+zahl(N*3)+'</small></dd></div><div><dt>Bahnen</dt><dd>'+best.length+' <small>von '+N+'</small></dd></div>'+
     '<div><dt>Asse</dt><dd>'+best.filter(b=>b.a).length+'</dd></div><div><dt>Tagesbahnen</dt><dd>'+Object.keys(st.tag).length+'</dd></div><div><dt>Endlos-Rekord</dt><dd>'+st.endl.best+'</dd></div>'+
     '<div><dt>Sachen</dt><dd>'+ITEMS.filter(i=>(i.p||i.ev||i.pass)&&st.own[i.id]).length+' <small>von '+ITEMS.filter(i=>i.p||i.ev||i.pass).length+'</small></dd></div>'+
-    '<div><dt>Tagesbonus-Serie</dt><dd>'+serieLaenge(st,st.login[datum()]?datum():plusTage(datum(),-1))+' <small>Tage</small></dd></div></dl></section>';}
-function renderEinst(){let h=profil()+'<section class="grp"><h3>Konto</h3>';
+    '<div><dt>Tagesbonus-Serie</dt><dd>'+serieLaenge(st,st.login[datum()]?datum():plusTage(datum(),-1))+' <small>Tage</small></dd></div>'+
+    '<div><dt>Sternenpass</dt><dd>'+(datum().slice(0,7)>=PASS.ab?'Stufe '+passJetzt().stufe:'–')+'</dd></div></dl></section>';}
+const POKAL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1.5A3.5 3.5 0 0 0 7.5 11M17 6h3v1.5a3.5 3.5 0 0 1-3.5 3.5M12 14v3M8.5 20h7M9.5 17h5v3h-5z"/></svg>';
+function renderEinst(){let h='<button type="button" class="mzeile" id="e-rang">'+POKAL+'<span><b>Rangliste</b><small>Wer schafft die Tagesbahn mit den wenigsten Schlägen?</small></span><i aria-hidden="true">›</i></button><section class="grp"><h3>Konto</h3>';
   if(konto)h+='<p>Angemeldet als <b>'+esc(konto.name)+'</b>. '+(syncFehler?'Letzter Abgleich ging schief: '+esc(syncFehler):syncZeit?'Zuletzt gespeichert um '+new Date(syncZeit).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+'.':'')+'</p><div class="row"><button type="button" id="e-sync">Jetzt speichern</button><button type="button" id="e-ab">Abmelden</button></div>';
   else if(server)h+='<p>Ohne Konto liegt dein Spielstand nur auf diesem Gerät. Mit Name und PIN holst du ihn auf jedes Handy.</p><div class="row"><button type="button" class="go" id="e-konto">Konto anlegen oder anmelden</button></div>';
   else h+='<p>Kein Spiel-Server erreichbar. Konten und Geschenk-Codes gehen nur in der App, die du von deinem Server installierst.</p>';
-  h+='</section><section class="grp"><h3>Spiel</h3>'+[['ringe','Schwerkraft-Ringe anzeigen'],['vorschau','Flugbahn beim Zielen anzeigen'],['vib','Vibrieren beim Einlochen']].filter(([k])=>k!=='vib'||navigator.vibrate)
+  h+='</section>'+profil()+'<section class="grp"><h3>Spiel</h3>'+[['ringe','Schwerkraft-Ringe anzeigen'],['vorschau','Flugbahn beim Zielen anzeigen'],['vib','Vibrieren beim Einlochen']].filter(([k])=>k!=='vib'||navigator.vibrate)
     .map(([k,t])=>'<label class="schalter" for="o-'+k+'"><span>'+t+'</span><input type="checkbox" role="switch" id="o-'+k+'" data-o="'+k+'"'+(st.opt[k]?' checked':'')+'></label>').join('')+'</section>';
   h+='<section class="grp"><h3>Code einlösen</h3><form id="e-cform" class="row"><label class="sr" for="e-code">Geschenk-Code</label><input id="e-code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Geschenk-Code"'+(server?'':' disabled')+'><button type="submit" class="go"'+(server?'':' disabled')+'>Einlösen</button></form><p class="hinweis" id="e-cmsg" role="status"></p></section>';
   h+='<section class="grp"><h3>Über</h3><p>Galaxy Golf · '+N+' Bahnen in fünf Stufen, jeden Tag eine Tagesbahn, Aufgaben, Sternenpass und der Endlos-Modus. Weltraum-Minigolf mit echter Schwerkraft.</p></section>';
   $('sinhalt').innerHTML=h;muenzAnzeige();$('sinhalt').querySelectorAll('[data-abz]').forEach(c=>abzeichen(c,c.dataset.abz));
-  if($('e-konto'))$('e-konto').onclick=()=>zeige('konto');
+  if($('e-konto'))$('e-konto').onclick=()=>zeige('konto');$('e-rang').onclick=()=>zeige('rang');
   if($('e-sync'))$('e-sync').onclick=async e=>{e.target.disabled=true;await sync();toast(syncFehler?syncFehler:'Gespeichert.');renderEinst();};
   if($('e-ab'))$('e-ab').onclick=()=>fragen('Abmelden?','Dein Fortschritt bleibt in deinem Konto. Auf diesem Gerät beginnt danach ein neuer Spielstand, bis du dich wieder anmeldest.','Abmelden',async()=>{await sync();
     try{await api('/api/abmelden',{});}catch(e){}konto=null;kontoSpeichern();st=neuerStand();eventsPruefen();lookAnwenden();try{localStorage.setItem('gg5',JSON.stringify(st));}catch(e){}bahn=null;lauf=null;toast('Abgemeldet.');zeige('home');});
@@ -417,7 +444,9 @@ async function renderAdmin(){if(!adminT)return zeige('einst');const S=$('sinhalt
 
 // ---------- Start ----------
 (function(){const ev=eventsPruefen();setzeLook(st.eq.o);
-  if(ev.vorbei)hinweis={t:ev.vorbei+' ist vorbei',p:'Im Inventar kannst du den Look jederzeit wieder anlegen.'};
   size();zeige('home');requestAnimationFrame(frame);
+  if(ev.vorbei)setTimeout(()=>toast(ev.vorbei+' ist vorbei. Im Inventar kannst du den Look wieder anlegen.'),500);
+  setTimeout(()=>bonusFenster(),700);
+  addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>{bonusFenster();if(ansicht!=='spiel')leisteZeigen();},500);});
   serverPruefen().then(ok=>{if(ok&&konto)sync();else aktualisieren();});})();
-addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('moment').hidden){momentZu();return;}if(!$('gross').hidden){schliesseGross();return;}if(!$('dialog').hidden){$('dialog').hidden=true;return;}if(ansicht!=='spiel'&&ansicht!=='home'){e.preventDefault();$('zur').click();}});
+addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('moment').hidden){momentZu();return;}if(!$('gross').hidden){schliesseGross();return;}if(!$('dialog').hidden){if($('b-spaeter'))$('b-spaeter').click();else $('dialog').hidden=true;return;}if(ansicht!=='spiel'&&ansicht!=='home'){e.preventDefault();$('zur').click();}});
